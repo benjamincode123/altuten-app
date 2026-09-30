@@ -92,7 +92,7 @@ export default function ResultScreen() {
   const router = useRouter();
   const { user, isAdmin, addFavorite, removeFavorite } = useAuth();
   const { selected: warnAllergens } = useAllergenPrefs();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { colors } = useTheme();
   const params = useLocalSearchParams<{
     barcode?: string;
@@ -428,6 +428,10 @@ export default function ResultScreen() {
               label={t('result.ingredients')}
               value={product.ingredients ?? ''}
               emptyLabel={t('result.noIngredients')}
+              collapsibleLines={2}
+              translatedValue={
+                locale === 'en' ? product.ingredientsEn : product.ingredientsNo
+              }
             />
 
             {!allergenFilterOn ? (

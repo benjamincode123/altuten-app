@@ -29,7 +29,7 @@ function resolveCountries(options?: ProductLookupOptions): ProductCountry[] {
   return [...PRODUCT_COUNTRIES];
 }
 
-/** Raw JSON shape returned by the .NET API (camelCase). */
+/** Raw JSON shape returned by the .NET API (camelCase + snake_case extras). */
 interface ProductApiResponse {
   id: number;
   barcode: string;
@@ -37,6 +37,11 @@ interface ProductApiResponse {
   produsent?: string | null;
   productionCountry?: string | null;
   ingredients: string | null;
+  /** Exact API name from ProductResponse. */
+  ingredients_en?: string | null;
+  ingredientsEn?: string | null;
+  ingredients_no?: string | null;
+  ingredientsNo?: string | null;
   glutenRating: string;
   createdAt: string;
   updatedAt: string;
@@ -81,6 +86,14 @@ function mapProduct(data: ProductApiResponse): Product {
   if (!isGlutenRating(data.glutenRating)) {
     throw new AppError('lookup_failed');
   }
+  const ingredientsEn =
+    (typeof data.ingredients_en === 'string' && data.ingredients_en.trim()) ||
+    (typeof data.ingredientsEn === 'string' && data.ingredientsEn.trim()) ||
+    null;
+  const ingredientsNo =
+    (typeof data.ingredients_no === 'string' && data.ingredients_no.trim()) ||
+    (typeof data.ingredientsNo === 'string' && data.ingredientsNo.trim()) ||
+    null;
   return {
     id: data.id,
     barcode: data.barcode,
@@ -88,6 +101,8 @@ function mapProduct(data: ProductApiResponse): Product {
     produsent: data.produsent ?? null,
     productionCountry: data.productionCountry ?? null,
     ingredients: data.ingredients,
+    ingredientsEn,
+    ingredientsNo,
     glutenRating: data.glutenRating,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -290,10 +305,12 @@ export class MssqlApiProductRepository implements ProductRepository {
           name: product.name.trim(),
           produsent: product.produsent?.trim() || null,
           ingredients: product.ingredients?.trim() || null,
-          glutenRating: product.glutenRating,
           imageBase64: product.imageBase64?.trim() || null,
-          id: product.id ?? null,
-          catalog: product.catalog ?? null,
+          // Only admin edits target an existing row; omit otherwise.
+          ...(product.id != null ? { id: product.id } : {}),
+          ...(product.catalog ? { catalog: product.catalog } : {}),
+          // The full allergen declaration is the source of truth — the API derives
+          // the legacy gluten rating from it, so we never send that field.
           allergens: product.allergens
             ? {
                 inneholder: product.allergens.inneholder ?? [],
@@ -301,6 +318,18 @@ export class MssqlApiProductRepository implements ProductRepository {
                 inneholderIkke: product.allergens.inneholderIkke ?? [],
               }
             : null,
+          country: product.country?.trim() || null,
+          // Region decides the target country table server-side; keep it in sync
+          // with country so a GPS-located submission always carries both.
+          region: product.region?.trim() || product.country?.trim() || null,
+          latitude:
+            typeof product.latitude === 'number' && Number.isFinite(product.latitude)
+              ? product.latitude
+              : null,
+          longitude:
+            typeof product.longitude === 'number' && Number.isFinite(product.longitude)
+              ? product.longitude
+              : null,
         }),
       },
       'save_failed'

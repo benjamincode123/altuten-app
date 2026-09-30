@@ -19,6 +19,8 @@ export interface ProductSubmissionItem {
   status: string;
   createdAt: string;
   allergens?: ProductAllergens | null;
+  /** GPS/catalog country when the submitter sent location (optional). */
+  country?: string | null;
 }
 
 export interface ProductSubmissionList {

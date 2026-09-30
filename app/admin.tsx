@@ -1139,6 +1139,7 @@ export default function AdminScreen() {
                     <Text style={[styles.meta, { color: colors.textSecondary }]}>
                       {t('admin.submittedBy')}:{' '}
                       {item.submittedByUsername ?? `#${item.submittedByUserId}`}
+                      {item.country ? ` · ${item.country.toUpperCase()}` : ''}
                     </Text>
                     <Text
                       style={[

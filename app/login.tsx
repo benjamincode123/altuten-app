@@ -30,6 +30,9 @@ function registerWebUrl(): string {
   return config.registerUrl;
 }
 
+/** Landing chooser first, then the sign-in form or the forgot-password form. */
+type AuthMode = 'choose' | 'signIn' | 'forgot';
+
 function looksLikeEmail(value: string): boolean {
   const email = value.trim();
   return email.length >= 5 && email.includes('@');
@@ -42,7 +45,7 @@ export default function LoginScreen() {
   const { colors, isDark } = useTheme();
   const keyboardShift = useSmoothKeyboardShift(200);
 
-  const [mode, setMode] = useState<'signIn' | 'forgot'>('signIn');
+  const [mode, setMode] = useState<AuthMode>('choose');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
@@ -55,7 +58,7 @@ export default function LoginScreen() {
   const patternLine = isDark ? darkenHex(colors.primary, 0.14) : '#2A2E35';
   const year = new Date().getFullYear();
 
-  function switchMode(next: 'signIn' | 'forgot') {
+  function switchMode(next: AuthMode) {
     setMode(next);
     setError(null);
     setInfo(null);
@@ -142,7 +145,31 @@ export default function LoginScreen() {
         >
           <View style={styles.main}>
             <View style={[styles.card, { backgroundColor: colors.background }]}>
-              {mode === 'forgot' ? (
+              {mode === 'choose' ? (
+                <>
+                  {error ? <ErrorText style={styles.error}>{error}</ErrorText> : null}
+
+                  <Pressable
+                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    onPress={() => switchMode('signIn')}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.buttonText, { color: colors.onPrimary }]}>
+                      {t('login.signIn')}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.buttonOutline, { borderColor: colors.primary }]}
+                    onPress={openRegisterWebsite}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.buttonText, { color: colors.primary }]}>
+                      {t('login.register')}
+                    </Text>
+                  </Pressable>
+                </>
+              ) : mode === 'forgot' ? (
                 <>
                   <Pressable
                     style={styles.backRow}
@@ -209,6 +236,23 @@ export default function LoginScreen() {
                 </>
               ) : (
                 <>
+                  <Pressable
+                    style={styles.backRow}
+                    onPress={() => switchMode('choose')}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('login.back')}
+                    hitSlop={8}
+                  >
+                    <MaterialCommunityIcons
+                      name="chevron-left"
+                      size={26}
+                      color={colors.primary}
+                    />
+                    <Text style={[styles.backText, { color: colors.primary }]}>
+                      {t('login.back')}
+                    </Text>
+                  </Pressable>
+
                   <Text style={[styles.label, styles.labelFirst, { color: colors.textSecondary }]}>
                     {t('login.username')}
                   </Text>
@@ -418,6 +462,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 15,
     borderRadius: 12,
+    alignItems: 'center',
+  },
+  buttonOutline: {
+    marginTop: 12,
+    paddingVertical: 15,
+    borderRadius: 12,
+    borderWidth: 1.5,
     alignItems: 'center',
   },
   buttonDisabled: {

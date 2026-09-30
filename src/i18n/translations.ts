@@ -126,6 +126,8 @@ type TranslationKey =
   | 'profile.localMode'
   | 'profile.logOut'
   | 'profile.loggingOut'
+  | 'profile.manageSubscription'
+  | 'profile.manageSubscriptionFailed'
   | 'profile.xp'
   | 'profile.xpProgress'
   | 'profile.xpToNext'
@@ -355,7 +357,10 @@ type TranslationKey =
   | 'result.allergensNoMatch'
   | 'result.backHome'
   | 'result.ingredients'
+  | 'result.ingredientsEn'
   | 'result.noIngredients'
+  | 'result.translate'
+  | 'result.showOriginal'
   | 'result.reportBarcode'
   | 'result.reportWrongInfo'
   | 'result.signInToReportWrongInfo'
@@ -664,6 +669,9 @@ const en: Record<TranslationKey, string> = {
   'profile.localMode': 'Local mode — no remote account required.',
   'profile.logOut': 'Log out',
   'profile.loggingOut': 'Logging out…',
+  'profile.manageSubscription': 'Manage subscription',
+  'profile.manageSubscriptionFailed':
+    'Could not open the website. Try altuten.no/min-side in your browser.',
   'profile.xp': 'XP',
   'profile.xpProgress': 'Level {level}',
   'profile.xpToNext': '{remaining} XP to level up',
@@ -909,7 +917,10 @@ const en: Record<TranslationKey, string> = {
     'None of your selected allergens are listed for this product.',
   'result.backHome': 'Back to AltUten',
   'result.ingredients': 'Ingredients',
+  'result.ingredientsEn': 'Ingredients (English)',
   'result.noIngredients': 'No ingredients recorded.',
+  'result.translate': 'Translate to English',
+  'result.showOriginal': 'Show original text',
   'result.reportBarcode': 'Report barcode',
   'result.reportWrongInfo': 'Report wrong info',
   'result.signInToReportWrongInfo': 'Sign in to report wrong product information.',
@@ -1249,6 +1260,9 @@ const nb: Record<TranslationKey, string> = {
   'profile.localMode': 'Lokal modus — ingen ekstern konto kreves.',
   'profile.logOut': 'Logg ut',
   'profile.loggingOut': 'Logger ut…',
+  'profile.manageSubscription': 'Administrer abonnement',
+  'profile.manageSubscriptionFailed':
+    'Kunne ikke åpne nettsiden. Prøv altuten.no/min-side i nettleseren.',
   'profile.xp': 'XP',
   'profile.xpProgress': 'Nivå {level}',
   'profile.xpToNext': '{remaining} XP til neste nivå',
@@ -1494,7 +1508,10 @@ const nb: Record<TranslationKey, string> = {
     'Ingen av dine valgte allergener er oppført for dette produktet.',
   'result.backHome': 'Tilbake til AltUten',
   'result.ingredients': 'Ingredienser',
+  'result.ingredientsEn': 'Ingredients (English)',
   'result.noIngredients': 'Ingen ingredienser registrert.',
+  'result.translate': 'Oversett til norsk',
+  'result.showOriginal': 'Vis originalteksten',
   'result.reportBarcode': 'Rapporter strekkode',
   'result.reportWrongInfo': 'Rapporter feil info',
   'result.signInToReportWrongInfo': 'Logg inn for å rapportere feil produktinformasjon.',

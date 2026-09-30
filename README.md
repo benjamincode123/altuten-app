@@ -89,6 +89,7 @@ src/
 
 ## Notes
 
-- Bundle ID / package: `com.altuten.app`
+- Bundle ID: `com.altuten.app` (iOS)
+- Android package: `com.altuten.baldersw`
 - URL scheme: `altuten`
 - The app is iOS-first but the same Expo codebase also runs on Android.

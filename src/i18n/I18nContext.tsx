@@ -9,6 +9,10 @@ import {
   useState,
 } from 'react';
 
+import {
+  readGpsSubmissionLocation,
+  suggestLocaleFromIsoCountry,
+} from '../country/detectProductCountry';
 import { Locale, translate, translateFormat, TranslationKey } from './translations';
 
 const LOCALE_KEY = 'altuten.locale';
@@ -37,9 +41,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         if (!cancelled && (stored === 'en' || stored === 'nb')) {
           setLocaleState(stored);
           void SecureStore.setItemAsync(LOCALE_KEY, stored).catch(() => undefined);
+          return;
         }
+
+        // No saved language yet — ask for location (system prompt) and pick a default.
+        const gps = await readGpsSubmissionLocation();
+        if (cancelled) return;
+        const suggested = suggestLocaleFromIsoCountry(gps.isoCountryCode);
+        setLocaleState(suggested);
+        void SecureStore.setItemAsync(LOCALE_KEY, suggested).catch(() => undefined);
       } catch {
-        // Keep default.
+        // Keep default English.
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -80,7 +92,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext);
   if (!ctx) {
-    throw new Error('useI18n must be used within an I18nProvider.');
+    throw new Error('useI18n must be used within I18nProvider');
   }
   return ctx;
 }

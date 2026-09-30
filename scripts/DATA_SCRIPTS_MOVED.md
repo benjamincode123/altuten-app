@@ -1,4 +1,4 @@
-﻿# Data & import scripts moved
+# Data & import scripts moved
 
 Product/import JSON/CSV data and related download/import scripts were moved to the backend split repo:
 
@@ -14,4 +14,4 @@ Moved scripts (paths use `ROOT = Path(__file__).resolve().parents[1]`, `DATA_DIR
 - import_oda_to_glutenfridb.py
 - import_vetduat_to_glutenfridb.py
 
-Image download / VetDuAt probe scripts remain here under `GlutenFree\scripts\`.
+Image download / VetDuAt probe scripts remain here in the `altuten-app` repo under `scripts\`.

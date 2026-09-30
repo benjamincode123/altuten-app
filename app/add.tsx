@@ -38,7 +38,7 @@ import { GlutenBadge } from '../src/components/GlutenBadge';
 import { AppTextInput } from '../src/components/KeyboardDismissBar';
 import { InfoCard, InfoChipRow, InfoRow } from '../src/components/ProductInfoCard';
 import { ScanWithAiTutorialModal } from '../src/components/ScanWithAiTutorialModal';
-import { getPreferredProductCountries } from '../src/country/detectProductCountry';
+import { getGpsSubmissionLocation, getPreferredProductCountries } from '../src/country/detectProductCountry';
 import { getProductRepository } from '../src/data/repository';
 import { cachePendingProduct } from '../src/data/pendingProductCache';
 import { MIN_PRODUCT_SEARCH_CHARS } from '../src/data/searchLimits';
@@ -419,6 +419,7 @@ export default function AddProductScreen() {
         }
       }
 
+      const gps = !isEditing ? await getGpsSubmissionLocation() : null;
       const saved = await getProductRepository().addProduct({
         barcode: barcodeValue,
         name: name.trim(),
@@ -429,6 +430,10 @@ export default function AddProductScreen() {
         imageBase64: submissionImageBase64,
         id: isEditing && editingId ? editingId : undefined,
         catalog: isEditing && editingCatalog ? editingCatalog : undefined,
+        country: gps?.country ?? null,
+        region: gps?.country ?? null,
+        latitude: gps?.latitude ?? null,
+        longitude: gps?.longitude ?? null,
       });
       // Keep pending submissions on-device so the next scan still shows this product
       // until it (hopefully) lands in the live catalog within ~2 days.

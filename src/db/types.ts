@@ -84,6 +84,10 @@ export interface Product {
   /** Country of origin / production country when available. */
   productionCountry?: string | null;
   ingredients: string | null;
+  /** English translation of ingredients when the API provides `ingredients_en`. */
+  ingredientsEn?: string | null;
+  /** Norwegian translation of ingredients when the API provides `ingredients_no`. */
+  ingredientsNo?: string | null;
   glutenRating: GlutenRating;
   createdAt: string;
   updatedAt: string;
@@ -107,6 +111,7 @@ export interface NewProduct {
   name: string;
   produsent?: string | null;
   ingredients?: string | null;
+  /** Local/offline use only — the API derives the rating from `allergens`. */
   glutenRating: GlutenRating;
   imageBase64?: string | null;
   /** When set with catalog, admin update of an existing catalog row. */
@@ -114,4 +119,13 @@ export interface NewProduct {
   catalog?: ProductCatalog;
   /** Structured allergen declaration (inneholder / kanInneholde / inneholderIkke). */
   allergens?: ProductAllergens | null;
+  /** Optional GPS/catalog country (no/se/es/…). */
+  country?: string | null;
+  /**
+   * Catalog region the submission belongs to (no/se/dk/de/…). Decides which
+   * country table the product is stored in. Defaults to `country` when unset.
+   */
+  region?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }

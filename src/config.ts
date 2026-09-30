@@ -19,6 +19,20 @@ export const config = {
     return `${this.apiBaseUrl.replace(/\/+$/, '')}/register`;
   },
 
+  /** Public AltUten website (account pages, billing). */
+  websiteBaseUrl: 'https://altuten.no',
+
+  /**
+   * "Min side" on the website, where members manage or cancel their
+   * subscription. The app hands its session over in the URL fragment.
+   */
+  minSideUrl(sessionToken?: string | null) {
+    const base = `${this.websiteBaseUrl.replace(/\/+$/, '')}/min-side`;
+    const token = sessionToken?.trim();
+    // Fragment (not query) so the token never reaches the server or its logs.
+    return token ? `${base}#token=${encodeURIComponent(token)}` : base;
+  },
+
   /**
    * Always talk to the live backend (MSSQL via .NET).
    */

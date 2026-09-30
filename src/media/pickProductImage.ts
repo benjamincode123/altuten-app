@@ -91,13 +91,9 @@ async function pickProductImageAsset(
       );
       return null;
     }
-  } else {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo library access to upload a product image.');
-      return null;
-    }
   }
+  // Android 13+: use the system photo picker (no READ_MEDIA_* permission).
+  // Older Android still uses limited storage access via the picker intents.
 
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],

@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,6 +22,7 @@ import {
 import { getAuthToken } from '../src/auth/session';
 import { ErrorText } from '../src/components/ErrorText';
 import { SmoothSwitch } from '../src/components/SmoothSwitch';
+import { config } from '../src/config';
 import * as adminApi from '../src/data/adminApi';
 import * as authApi from '../src/data/authApi';
 import type { XpHistoryItem, XpProfile } from '../src/data/authApi';
@@ -86,6 +88,8 @@ export default function UserScreen() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [openingBilling, setOpeningBilling] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [adminPendingTotal, setAdminPendingTotal] = useState(0);
   const lastRefreshAtRef = useRef(0);
@@ -183,6 +187,29 @@ export default function UserScreen() {
       }
     } finally {
       setSigningOut(false);
+    }
+  }
+
+  /**
+   * Opens "Min side" on the website with the app session handed over in the URL
+   * fragment, so the user lands signed in and can change or cancel billing.
+   */
+  async function handleManageSubscription() {
+    if (openingBilling) return;
+    setBillingError(null);
+    setOpeningBilling(true);
+    try {
+      const url = config.minSideUrl(getAuthToken());
+      const opened = await Linking.canOpenURL(url);
+      if (!opened) {
+        setBillingError(t('profile.manageSubscriptionFailed'));
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      setBillingError(t('profile.manageSubscriptionFailed'));
+    } finally {
+      setOpeningBilling(false);
     }
   }
 
@@ -495,6 +522,38 @@ export default function UserScreen() {
       )}
 
       {authEnabled && (
+        <>
+          <Pressable
+            style={[
+              styles.manageSubscriptionButton,
+              { borderColor: colors.primary, opacity: openingBilling ? 0.7 : 1 },
+            ]}
+            onPress={() => void handleManageSubscription()}
+            disabled={openingBilling}
+            accessibilityRole="button"
+            accessibilityState={{ busy: openingBilling }}
+          >
+            <MaterialCommunityIcons
+              name="credit-card-outline"
+              size={20}
+              color={colors.primary}
+            />
+            <Text
+              style={[styles.manageSubscriptionText, { color: colors.primary }]}
+            >
+              {t('profile.manageSubscription')}
+            </Text>
+            <MaterialCommunityIcons
+              name="open-in-new"
+              size={18}
+              color={colors.primary}
+            />
+          </Pressable>
+          {billingError ? <ErrorText>{billingError}</ErrorText> : null}
+        </>
+      )}
+
+      {authEnabled && (
         <Pressable
           style={[
             styles.logoutButton,
@@ -687,6 +746,21 @@ const styles = StyleSheet.create({
   historyXp: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  manageSubscriptionButton: {
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  manageSubscriptionText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   logoutButton: {
     marginTop: 12,

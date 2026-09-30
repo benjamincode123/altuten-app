@@ -16,7 +16,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "AltUten uses the camera to scan grocery barcodes and photograph products for review.",
         "NSPhotoLibraryUsageDescription": "AltUten lets you attach a product photo when reporting a barcode.",
-        "NSLocationWhenInUseUsageDescription": "AltUten uses your location to search the product catalog for your country first.",
+        "NSLocationWhenInUseUsageDescription": "We would like to give you the best experience. To make AltUten faster and more suited to you, we use your location for language and local product results.",
         "CFBundleDisplayName": "AltUten",
         "UIBackgroundModes": [
           "remote-notification"
@@ -24,8 +24,8 @@
       }
     },
     "android": {
-      "package": "com.altuten.app",
-      "versionCode": 8,
+      "package": "com.altuten.baldersw",
+      "versionCode": 10,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#000000",
@@ -36,10 +36,15 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -53,6 +58,10 @@
         {
           "ios": {
             "enableSceneSupport": true
+          },
+          "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true
           }
         }
       ],
@@ -66,13 +75,14 @@
         "expo-image-picker",
         {
           "photosPermission": "AltUten lets you attach a product photo when reporting a barcode.",
-          "cameraPermission": "AltUten uses the camera to photograph products for barcode reports."
+          "cameraPermission": "AltUten uses the camera to photograph products for barcode reports.",
+          "microphonePermission": false
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "AltUten uses your location to search the product catalog for your country first."
+          "locationWhenInUsePermission": "We would like to give you the best experience. To make AltUten faster and more suited to you, we use your location for language and local product results."
         }
       ],
       [
