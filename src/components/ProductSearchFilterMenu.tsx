@@ -31,7 +31,7 @@ export function ProductSearchFilterMenu({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, allergenName } = useI18n();
   const active = activeProductFilterCount(filters) > 0;
 
   const setMode = (option: AllergenOption, mode: AllergenFilterMode) => {
@@ -123,7 +123,7 @@ export function ProductSearchFilterMenu({
                   style={[styles.row, { borderColor: colors.border }]}
                 >
                   <Text style={[styles.allergen, { color: colors.text }]} numberOfLines={2}>
-                    {option}
+                    {allergenName(option)}
                   </Text>
                   <View style={styles.modes}>
                     <ModeButton

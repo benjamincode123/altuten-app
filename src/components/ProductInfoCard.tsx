@@ -173,6 +173,7 @@ export function InfoChipRow({
   emptyLabel: string;
 }) {
   const { colors } = useTheme();
+  const { allergenName } = useI18n();
   return (
     <View style={styles.row}>
       <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
@@ -186,7 +187,9 @@ export function InfoChipRow({
                 { borderColor: accent.color, backgroundColor: accent.backgroundColor },
               ]}
             >
-              <Text style={[styles.chipText, { color: accent.color }]}>{name}</Text>
+              <Text style={[styles.chipText, { color: accent.color }]}>
+                {allergenName(name)}
+              </Text>
             </View>
           ))}
         </View>

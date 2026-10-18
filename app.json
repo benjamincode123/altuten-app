@@ -2,7 +2,7 @@
   "expo": {
     "name": "AltUten",
     "slug": "altuten",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "altuten",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.altuten.app",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "deploymentTarget": "16.4",
       "icon": "./assets/icon.png",
       "infoPlist": {
@@ -25,7 +25,7 @@
     },
     "android": {
       "package": "com.altuten.baldersw",
-      "versionCode": 10,
+      "versionCode": 11,
       "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "backgroundColor": "#000000",

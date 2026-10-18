@@ -26,9 +26,11 @@ import {
   TRACES_CHIP,
 } from '../src/allergens/allergenChipColors';
 import { useAuth } from '../src/auth/AuthContext';
+import { getAuthToken } from '../src/auth/session';
 import { BarcodeCaptureModal } from '../src/components/BarcodeCaptureModal';
 import { AddToListModal } from '../src/components/AddToListModal';
 import { ErrorText } from '../src/components/ErrorText';
+import { FoodNeedsSurveyModal } from '../src/components/FoodNeedsSurveyModal';
 import {
   isOpenFoodFactsImage,
   OpenFoodFactsCredit,
@@ -47,37 +49,23 @@ import {
 import { useI18n } from '../src/i18n/I18nContext';
 import {
   isUnknownBarcode,
+  parseProductCatalog,
   Product,
   ProductCatalog,
 } from '../src/db/types';
 import { askPickProductImage } from '../src/media/pickProductImage';
 import { userFacingError } from '../src/errors/userFacingError';
 import { goHome } from '../src/navigation/goHome';
+import type { FoodNeedsSurveyResponse } from '../src/survey/foodNeedsSurvey';
+import { loadOwnFoodNeedsSurvey } from '../src/survey/foodNeedsSurveyCache';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
 
 type LoadState = 'loading' | 'found' | 'not_found' | 'error';
 
-function parseCatalog(value: string | undefined): ProductCatalog | null {
-  if (
-    value === 'products' ||
-    value === 'products_se' ||
-    value === 'products_dk' ||
-    value === 'products_de'
-  ) {
-    return value;
-  }
-  return null;
-}
-
-/** Favorites / reports / photo / wrong-info work on NO/SE/DK/DE catalogs. */
+/** Favorites / reports / photo / wrong-info need a catalog row to point at. */
 function isWritableCatalog(catalog: ProductCatalog | undefined): boolean {
-  return (
-    catalog === 'products' ||
-    catalog === 'products_se' ||
-    catalog === 'products_dk' ||
-    catalog === 'products_de'
-  );
+  return !!catalog;
 }
 
 function productImageUri(imageUrl: string | null | undefined): string | null {
@@ -100,7 +88,7 @@ export default function ResultScreen() {
     catalog?: string;
   }>();
   const barcode = (params.barcode ?? '').toString();
-  const catalogParam = parseCatalog((params.catalog ?? '').toString());
+  const catalogParam = parseProductCatalog((params.catalog ?? '').toString());
   const idParam = Number.parseInt((params.id ?? '').toString(), 10);
 
   const [state, setState] = useState<LoadState>('loading');
@@ -118,6 +106,8 @@ export default function ResultScreen() {
   const [listPickerOpen, setListPickerOpen] = useState(false);
   const [wrongInfoOpen, setWrongInfoOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
+  const [surveyOpen, setSurveyOpen] = useState(false);
+  const [savedSurvey, setSavedSurvey] = useState<FoodNeedsSurveyResponse | null>(null);
 
   useReliableBackHeader({ title: t('nav.result') });
 
@@ -246,8 +236,10 @@ export default function ResultScreen() {
     isUnknownBarcode(product.barcode) &&
     !!product.catalog;
 
+  // No `user` check: scanning already requires a session, so reaching this
+  // screen signed out is impossible and the old "sign in" hint only ever fired
+  // for products whose catalog the app failed to recognise.
   const canAddPhoto =
-    !!user &&
     state === 'found' &&
     !!product &&
     !!product.catalog &&
@@ -270,6 +262,37 @@ export default function ResultScreen() {
     !!product?.catalog &&
     product.id > 0 &&
     isWritableCatalog(product.catalog);
+
+  const canAnswerSurvey =
+    state === 'found' &&
+    !!user &&
+    !!product?.catalog &&
+    product.id > 0 &&
+    isWritableCatalog(product.catalog);
+
+  const surveyProduct =
+    canAnswerSurvey && product?.catalog
+      ? { catalog: product.catalog, productId: product.id }
+      : null;
+
+  // One answer per user per product, so the lookup decides whether the button
+  // offers a first answer or an edit.
+  useEffect(() => {
+    setSavedSurvey(null);
+    if (!user || !surveyProduct) return;
+    const token = getAuthToken();
+    if (!token) return;
+    let cancelled = false;
+    void loadOwnFoodNeedsSurvey(user.id, token, surveyProduct)
+      .then((saved) => {
+        if (!cancelled) setSavedSurvey(saved);
+      })
+      // A failed lookup just means the button offers a fresh answer.
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, surveyProduct?.catalog, surveyProduct?.productId]);
 
   const hasDeclaration = productHasAllergenData(product?.allergens);
   const allergenFilterOn = warnAllergens.length > 0;
@@ -382,7 +405,7 @@ export default function ResultScreen() {
                   >
                     {canAddPhoto
                       ? t('result.tapToAddPhoto')
-                      : t('result.signInToAddPhoto')}
+                      : t('result.photoNotAvailable')}
                   </Text>
                 </>
               )}
@@ -517,6 +540,27 @@ export default function ResultScreen() {
             </View>
 
           </View>
+
+          {canAnswerSurvey ? (
+            <Pressable
+              style={[
+                styles.favoriteButton,
+                { borderColor: colors.primary, backgroundColor: colors.background },
+              ]}
+              onPress={() => setSurveyOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={savedSurvey ? t('survey.edit') : t('survey.open')}
+            >
+              <MaterialCommunityIcons
+                name="comment-question-outline"
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={[styles.favoriteButtonText, { color: colors.primary }]}>
+                {savedSurvey ? t('survey.edit') : t('survey.open')}
+              </Text>
+            </Pressable>
+          ) : null}
 
           {canFavorite ? (
             <>
@@ -773,6 +817,17 @@ export default function ResultScreen() {
             : null
         }
         onClose={() => setListPickerOpen(false)}
+      />
+      <FoodNeedsSurveyModal
+        visible={surveyOpen}
+        product={surveyProduct}
+        productName={product?.name}
+        saved={savedSurvey}
+        onClose={() => setSurveyOpen(false)}
+        onSubmitted={(message, saved) => {
+          setSavedSurvey(saved);
+          setReportFeedback({ kind: 'success', text: message });
+        }}
       />
       <ReportWrongInfoModal
         visible={wrongInfoOpen}

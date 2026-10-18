@@ -13,7 +13,13 @@ import {
   readGpsSubmissionLocation,
   suggestLocaleFromIsoCountry,
 } from '../country/detectProductCountry';
-import { Locale, translate, translateFormat, TranslationKey } from './translations';
+import {
+  Locale,
+  translate,
+  translateAllergen,
+  translateFormat,
+  TranslationKey,
+} from './translations';
 
 const LOCALE_KEY = 'altuten.locale';
 const LEGACY_LOCALE_KEY = 'gluten_locale';
@@ -23,6 +29,8 @@ interface I18nContextValue {
   setLocale: (locale: Locale) => void;
   t: (key: TranslationKey) => string;
   tf: (key: TranslationKey, vars: Record<string, string | number>) => string;
+  /** Localized display name for a (Norwegian) allergen label. */
+  allergenName: (label: string) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
@@ -77,9 +85,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [locale]
   );
 
+  const allergenName = useCallback(
+    (label: string) => translateAllergen(locale, label),
+    [locale]
+  );
+
   const value = useMemo<I18nContextValue>(
-    () => ({ locale, setLocale, t, tf }),
-    [locale, setLocale, t, tf]
+    () => ({ locale, setLocale, t, tf, allergenName }),
+    [locale, setLocale, t, tf, allergenName]
   );
 
   if (!ready) {

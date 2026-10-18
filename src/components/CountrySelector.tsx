@@ -2,16 +2,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   orderProductCountries,
-  PRODUCT_COUNTRIES,
   ProductCountry,
+  SEARCH_COUNTRIES,
 } from '../country/productCountries';
 import { useI18n } from '../i18n/I18nContext';
+import type { TranslationKey } from '../i18n/translations';
 import { useTheme } from '../theme/ThemeContext';
 
-const LABEL_KEYS: Record<
-  ProductCountry,
-  'country.no' | 'country.se' | 'country.dk' | 'country.de'
-> = {
+const LABEL_KEYS: Record<string, TranslationKey> = {
   no: 'country.no',
   se: 'country.se',
   dk: 'country.dk',
@@ -35,7 +33,7 @@ export function CountrySelector({
 }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const ordered = orderProductCountries(PRODUCT_COUNTRIES, preferredFirst);
+  const ordered = orderProductCountries(SEARCH_COUNTRIES, preferredFirst);
 
   return (
     <View style={[styles.wrap, compact && styles.wrapCompact]}>
@@ -48,7 +46,9 @@ export function CountrySelector({
               onPress={() => onToggle(code)}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              accessibilityLabel={t(LABEL_KEYS[code])}
+              accessibilityLabel={
+                LABEL_KEYS[code] ? t(LABEL_KEYS[code]) : code.toUpperCase()
+              }
               style={[
                 styles.chip,
                 compact && styles.chipCompact,

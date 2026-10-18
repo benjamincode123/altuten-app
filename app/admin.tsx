@@ -38,7 +38,7 @@ import { getProductRepository } from '../src/data/repository';
 import {
   GlutenRating,
   isGlutenRating,
-  ProductCatalog,
+  parseProductCatalog,
 } from '../src/db/types';
 import { userFacingError } from '../src/errors/userFacingError';
 import { useI18n } from '../src/i18n/I18nContext';
@@ -120,18 +120,6 @@ function draftFromWrongInfo(item: WrongInfoReportItem): ApproveSubmissionEdits {
   };
 }
 
-function parseCatalog(value: string): ProductCatalog | null {
-  if (
-    value === 'products' ||
-    value === 'products_se' ||
-    value === 'products_dk' ||
-    value === 'products_de'
-  ) {
-    return value;
-  }
-  return null;
-}
-
 function imageUri(imageUrl: string): string {
   const raw = (imageUrl ?? '').trim();
   if (!raw) return '';
@@ -144,7 +132,7 @@ export default function AdminScreen() {
   const router = useRouter();
   const { isAdmin, authEnabled } = useAuth();
   const { colors } = useTheme();
-  const { t, tf, locale } = useI18n();
+  const { t, tf, locale, allergenName } = useI18n();
   const { width: windowWidth } = useWindowDimensions();
   const isWide = windowWidth >= 768;
   const isXWide = windowWidth >= 1100;
@@ -507,7 +495,7 @@ export default function AdminScreen() {
                     { color: active ? CONTAINS_CHIP.color : colors.text },
                   ]}
                 >
-                  {allergen}
+                  {allergenName(allergen)}
                 </Text>
               </Pressable>
             );
@@ -544,7 +532,7 @@ export default function AdminScreen() {
                     { color: active ? TRACES_CHIP.color : colors.text },
                   ]}
                 >
-                  {allergen}
+                  {allergenName(allergen)}
                 </Text>
               </Pressable>
             );
@@ -648,7 +636,7 @@ export default function AdminScreen() {
     if (!token) return;
     const item = wrongInfoItems.find((r) => r.id === id);
     if (!item || !item.productFound) return;
-    const catalog = parseCatalog(item.catalog);
+    const catalog = parseProductCatalog(item.catalog);
     if (!catalog) {
       setError(t('admin.nameRequired'));
       return;

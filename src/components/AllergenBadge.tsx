@@ -37,16 +37,17 @@ export function AllergenBadge({
   size = 'small',
   showKindPrefix = true,
 }: AllergenBadgeProps) {
-  const { tf } = useI18n();
+  const { tf, allergenName } = useI18n();
   const meta = KIND_STYLE[kind];
   const isLarge = size === 'large';
+  const displayName = allergenName(name);
   const label = !showKindPrefix
-    ? name
+    ? displayName
     : kind === 'contains'
-      ? tf('result.allergenBadgeContains', { name })
+      ? tf('result.allergenBadgeContains', { name: displayName })
       : kind === 'mayContain'
-        ? tf('result.allergenBadgeMayContain', { name })
-        : tf('result.allergenBadgeFree', { name });
+        ? tf('result.allergenBadgeMayContain', { name: displayName })
+        : tf('result.allergenBadgeFree', { name: displayName });
 
   return (
     <View

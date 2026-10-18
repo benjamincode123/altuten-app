@@ -24,14 +24,14 @@ import * as listsApi from '../src/data/listsApi';
 import type { ProductListSummary } from '../src/data/listsApi';
 import { upsertCachedList } from '../src/data/listsCache';
 import { getProductRepository } from '../src/data/repository';
-import { Product } from '../src/db/types';
+import { Product, type ProductCatalog } from '../src/db/types';
 import { userFacingError } from '../src/errors/userFacingError';
 import { useI18n } from '../src/i18n/I18nContext';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
 
 type Row = {
-  catalog: 'products' | 'products_se' | 'products_dk' | 'products_de';
+  catalog: ProductCatalog;
   id: number;
   product: Product | null;
 };

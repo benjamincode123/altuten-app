@@ -25,7 +25,7 @@ export function AllergenPickerModal({
 }: AllergenPickerModalProps) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, allergenName } = useI18n();
   const accent = kind === 'contains' ? CONTAINS_CHIP : TRACES_CHIP;
   const title =
     kind === 'contains'
@@ -82,7 +82,7 @@ export function AllergenPickerModal({
                   ]}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: active }}
-                  accessibilityLabel={`${title}: ${allergen}`}
+                  accessibilityLabel={`${title}: ${allergenName(allergen)}`}
                 >
                   <Text
                     style={[
@@ -90,7 +90,7 @@ export function AllergenPickerModal({
                       { color: active ? accent.color : colors.text },
                     ]}
                   >
-                    {allergen}
+                    {allergenName(allergen)}
                   </Text>
                 </Pressable>
               );

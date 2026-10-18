@@ -11,20 +11,11 @@ import {
 import { AllergenBadge } from '../src/components/AllergenBadge';
 import { ErrorText } from '../src/components/ErrorText';
 import { getProductRepository } from '../src/data/repository';
-import { Product, ProductCatalog } from '../src/db/types';
+import { parseProductCatalog, Product } from '../src/db/types';
 import { userFacingError } from '../src/errors/userFacingError';
 import { useI18n } from '../src/i18n/I18nContext';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
-
-function isCatalog(value: string): value is ProductCatalog {
-  return (
-    value === 'products' ||
-    value === 'products_se' ||
-    value === 'products_dk' ||
-    value === 'products_de'
-  );
-}
 
 /** Full allergen declaration for a product — opened from truncated search cards. */
 export default function ProductAllergensScreen() {
@@ -36,8 +27,7 @@ export default function ProductAllergensScreen() {
     name?: string;
   }>();
   const id = Number.parseInt((params.id ?? '').toString(), 10);
-  const catalogRaw = (params.catalog ?? '').toString();
-  const catalog = isCatalog(catalogRaw) ? catalogRaw : null;
+  const catalog = parseProductCatalog((params.catalog ?? '').toString());
   const titleHint = (params.name ?? '').toString().trim();
 
   const [product, setProduct] = useState<Product | null>(null);

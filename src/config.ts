@@ -3,14 +3,23 @@ const PRODUCTION_API_URL =
   'https://utengluten-cvg7h6fqgxhxd9cw.swedencentral-01.azurewebsites.net';
 
 /**
+ * Local/LAN backend for development, e.g. http://192.168.10.171:5178.
+ * Only honoured under `__DEV__`, so a release build can never ship pointing at
+ * a test server regardless of what was in the environment when it was bundled.
+ */
+const DEV_API_URL = __DEV__
+  ? process.env.EXPO_PUBLIC_API_URL?.trim() || undefined
+  : undefined;
+
+/**
  * App runtime configuration.
- * Always uses the live AltUten API — never localhost or a LAN test server.
+ * Released builds always use the live AltUten API.
  */
 export const config = {
   /**
    * Base URL of the .NET backend API.
    */
-  apiBaseUrl: PRODUCTION_API_URL,
+  apiBaseUrl: DEV_API_URL ?? PRODUCTION_API_URL,
 
   /**
    * Web registration page (opened in the system browser from the app).

@@ -1,3 +1,5 @@
+import { resolveAllergenOption, type AllergenOption } from '../allergens/allergenPrefs';
+
 export type Locale = 'en' | 'nb';
 
 type TranslationKey =
@@ -399,7 +401,7 @@ type TranslationKey =
   | 'result.photoPending'
   | 'result.photoSaved'
   | 'result.addPhotoHint'
-  | 'result.signInToAddPhoto'
+  | 'result.photoNotAvailable'
   | 'result.productPhotoLabel'
   | 'result.tapToAddPhoto'
   | 'result.submitBarcode'
@@ -530,7 +532,66 @@ type TranslationKey =
   | 'add.savedTitle'
   | 'add.savedUpdated'
   | 'add.savedAdded'
-  | 'add.couldNotSave';
+  | 'add.couldNotSave'
+  | 'survey.open'
+  | 'survey.edit'
+  | 'survey.signInRequired'
+  | 'survey.step'
+  | 'survey.back'
+  | 'survey.next'
+  | 'survey.submit'
+  | 'survey.needAnswer'
+  | 'survey.thanks'
+  | 'survey.updated'
+  | 'survey.age.section'
+  | 'survey.age.question'
+  | 'survey.age.hint'
+  | 'survey.age.0_5'
+  | 'survey.age.6_12'
+  | 'survey.age.13_17'
+  | 'survey.age.18_29'
+  | 'survey.age.30_44'
+  | 'survey.age.45_59'
+  | 'survey.age.60plus'
+  | 'survey.needs.section'
+  | 'survey.needs.question'
+  | 'survey.needs.hint'
+  | 'survey.needs.milkProtein'
+  | 'survey.needs.lactose'
+  | 'survey.needs.celiac'
+  | 'survey.needs.wheat'
+  | 'survey.needs.egg'
+  | 'survey.needs.peanut'
+  | 'survey.needs.treeNut'
+  | 'survey.needs.soy'
+  | 'survey.needs.fish'
+  | 'survey.needs.shellfish'
+  | 'survey.needs.otherAllergy'
+  | 'survey.needs.otherIntolerance'
+  | 'survey.needs.suspected'
+  | 'survey.needs.none'
+  | 'survey.diagnosis.section'
+  | 'survey.diagnosis.question'
+  | 'survey.diagnosis.allergyDiagnosed'
+  | 'survey.diagnosis.intoleranceDiagnosed'
+  | 'survey.diagnosis.suspected'
+  | 'survey.diagnosis.selfReported'
+  | 'survey.diagnosis.unsure'
+  | 'survey.reaction.section'
+  | 'survey.reaction.question'
+  | 'survey.reaction.hint'
+  | 'survey.reaction.mild'
+  | 'survey.reaction.severe'
+  | 'survey.reaction.avoiding'
+  | 'survey.reaction.noSymptoms'
+  | 'survey.reaction.otherReason'
+  | 'survey.buyer.section'
+  | 'survey.buyer.question'
+  | 'survey.buyer.self'
+  | 'survey.buyer.parent'
+  | 'survey.buyer.household'
+  | 'survey.buyer.caregiver'
+  | 'survey.buyer.notBuyer';
 
 const en: Record<TranslationKey, string> = {
   'allergnom.introGreeting': '"Hey there, it\'s me!" 👋',
@@ -961,7 +1022,7 @@ const en: Record<TranslationKey, string> = {
   'result.photoSaved': 'Thanks — photo saved on this product.',
   'result.addPhotoHint':
     'This product is missing a photo. Add one so we can review it before we make it visible.',
-  'result.signInToAddPhoto': 'Sign in to submit a photo for this product.',
+  'result.photoNotAvailable': 'A photo cannot be added for this product yet.',
   'result.productPhotoLabel': 'Product photo',
   'result.tapToAddPhoto': 'Tap to add a product photo',
   'result.submitBarcode': 'Submit barcode',
@@ -1121,6 +1182,76 @@ const en: Record<TranslationKey, string> = {
   'add.savedUpdated': '"{name}" has been updated.',
   'add.savedAdded': '"{name}" has been added.',
   'add.couldNotSave': 'Could not save',
+  'survey.open': 'Tell us about your experience',
+  'survey.edit': 'Change your answers',
+  'survey.signInRequired': 'Sign in to answer the questionnaire.',
+  'survey.step': 'Step {current} of {total}',
+  'survey.back': 'Back',
+  'survey.next': 'Next',
+  'survey.submit': 'Submit',
+  'survey.needAnswer': 'Pick at least one option to continue.',
+  'survey.thanks': 'Thanks! Your answers have been submitted.',
+  'survey.updated': 'Your answers have been updated.',
+  'survey.age.section': 'Age group',
+  'survey.age.question': 'Which age group does the dietary need apply to?',
+  'survey.age.hint':
+    'Pick one. If you are answering for a child, choose the child’s age.',
+  'survey.age.0_5': '0–5 years',
+  'survey.age.6_12': '6–12 years',
+  'survey.age.13_17': '13–17 years',
+  'survey.age.18_29': '18–29 years',
+  'survey.age.30_44': '30–44 years',
+  'survey.age.45_59': '45–59 years',
+  'survey.age.60plus': '60 years or older',
+  'survey.needs.section': 'Dietary needs',
+  'survey.needs.question': 'Which food allergies or intolerances apply to you?',
+  'survey.needs.hint':
+    'Pick all that apply. Distinguish between allergy and intolerance.',
+  'survey.needs.milkProtein': 'Milk protein allergy',
+  'survey.needs.lactose': 'Lactose intolerance',
+  'survey.needs.celiac': 'Coeliac disease',
+  'survey.needs.wheat': 'Wheat allergy',
+  'survey.needs.egg': 'Egg allergy',
+  'survey.needs.peanut': 'Peanut allergy',
+  'survey.needs.treeNut': 'Nut allergy (other nuts)',
+  'survey.needs.soy': 'Soy allergy',
+  'survey.needs.fish': 'Fish allergy',
+  'survey.needs.shellfish': 'Shellfish allergy',
+  'survey.needs.otherAllergy': 'Another diagnosed food allergy',
+  'survey.needs.otherIntolerance': 'Another diagnosed intolerance',
+  'survey.needs.suspected': 'Suspected allergy or intolerance',
+  'survey.needs.none': 'None of these',
+  'survey.diagnosis.section': 'Diagnosis status',
+  'survey.diagnosis.question': 'How is the dietary need confirmed?',
+  'survey.diagnosis.allergyDiagnosed':
+    'Food allergy diagnosed by a health professional',
+  'survey.diagnosis.intoleranceDiagnosed':
+    'Intolerance or coeliac disease diagnosed by a health professional',
+  'survey.diagnosis.suspected': 'I suspect an allergy or intolerance',
+  'survey.diagnosis.selfReported':
+    'Based on my own experience, without a confirmed diagnosis',
+  'survey.diagnosis.unsure':
+    'Unsure about the diagnosis / answering on behalf of someone else',
+  'survey.reaction.section': 'Actual need',
+  'survey.reaction.question':
+    'What has happened when you have eaten food you react to?',
+  'survey.reaction.hint': 'Pick the option that best describes your experience.',
+  'survey.reaction.mild':
+    'I have had mild symptoms, for example itching or stomach trouble',
+  'survey.reaction.severe':
+    'I have had severe symptoms or needed emergency treatment',
+  'survey.reaction.avoiding':
+    'I avoid the food, but have not been exposed recently',
+  'survey.reaction.noSymptoms': 'I have not noticed symptoms when eating it',
+  'survey.reaction.otherReason':
+    'I avoid the food for other reasons, or I am unsure',
+  'survey.buyer.section': 'Market and buying behaviour',
+  'survey.buyer.question': 'What is your role when allergy-friendly food is bought?',
+  'survey.buyer.self': 'I buy food mainly for myself',
+  'survey.buyer.parent': 'I am a parent buying food for a child',
+  'survey.buyer.household': 'I buy food for several people in the household',
+  'survey.buyer.caregiver': 'I shop for someone I help or care for',
+  'survey.buyer.notBuyer': 'I am not usually the one who buys the food',
 };
 
 const nb: Record<TranslationKey, string> = {
@@ -1552,7 +1683,7 @@ const nb: Record<TranslationKey, string> = {
   'result.photoSaved': 'Takk — bildet er lagret på produktet.',
   'result.addPhotoHint':
     'Dette produktet mangler bilde. Legg til ett som vi kan se over før vi synliggjør det.',
-  'result.signInToAddPhoto': 'Logg inn for å sende inn bilde til dette produktet.',
+  'result.photoNotAvailable': 'Bilde kan ikke legges til for dette produktet ennå.',
   'result.productPhotoLabel': 'Produktbilde',
   'result.tapToAddPhoto': 'Trykk for å legge til produktbilde',
   'result.submitBarcode': 'Send strekkode',
@@ -1712,6 +1843,70 @@ const nb: Record<TranslationKey, string> = {
   'add.savedUpdated': '«{name}» er oppdatert.',
   'add.savedAdded': '«{name}» er lagt til.',
   'add.couldNotSave': 'Kunne ikke lagre',
+  'survey.open': 'Fortell oss din opplevelse',
+  'survey.edit': 'Endre svarene dine',
+  'survey.signInRequired': 'Logg inn for å svare på spørreskjemaet.',
+  'survey.step': 'Steg {current} av {total}',
+  'survey.back': 'Tilbake',
+  'survey.next': 'Neste',
+  'survey.submit': 'Send inn',
+  'survey.needAnswer': 'Velg minst ett alternativ for å gå videre.',
+  'survey.thanks': 'Takk! Svarene dine er sendt inn.',
+  'survey.updated': 'Svarene dine er oppdatert.',
+  'survey.age.section': 'Aldersgruppe',
+  'survey.age.question': 'Hvilken aldersgruppe gjelder matbehovet for?',
+  'survey.age.hint': 'Velg én. Hvis du svarer for et barn, velger du barnets alder.',
+  'survey.age.0_5': '0–5 år',
+  'survey.age.6_12': '6–12 år',
+  'survey.age.13_17': '13–17 år',
+  'survey.age.18_29': '18–29 år',
+  'survey.age.30_44': '30–44 år',
+  'survey.age.45_59': '45–59 år',
+  'survey.age.60plus': '60 år eller eldre',
+  'survey.needs.section': 'Matbehov',
+  'survey.needs.question': 'Hvilke matallergier eller intoleranser gjelder for deg?',
+  'survey.needs.hint': 'Velg alle som passer. Skill mellom allergi og intoleranse.',
+  'survey.needs.milkProtein': 'Melkeproteinallergi',
+  'survey.needs.lactose': 'Laktoseintoleranse',
+  'survey.needs.celiac': 'Cøliaki',
+  'survey.needs.wheat': 'Hveteallergi',
+  'survey.needs.egg': 'Eggallergi',
+  'survey.needs.peanut': 'Peanøttallergi',
+  'survey.needs.treeNut': 'Nøtteallergi (andre nøtter)',
+  'survey.needs.soy': 'Soyaallergi',
+  'survey.needs.fish': 'Fiskeallergi',
+  'survey.needs.shellfish': 'Skalldyrallergi',
+  'survey.needs.otherAllergy': 'Annen diagnostisert matallergi',
+  'survey.needs.otherIntolerance': 'Annen diagnostisert intoleranse',
+  'survey.needs.suspected': 'Mistenkt allergi eller intoleranse',
+  'survey.needs.none': 'Ingen av disse',
+  'survey.diagnosis.section': 'Diagnosestatus',
+  'survey.diagnosis.question': 'Hvordan er matbehovet bekreftet?',
+  'survey.diagnosis.allergyDiagnosed': 'Matallergi diagnostisert av helsepersonell',
+  'survey.diagnosis.intoleranceDiagnosed':
+    'Intoleranse eller cøliaki diagnostisert av helsepersonell',
+  'survey.diagnosis.suspected': 'Mistenker allergi eller intoleranse',
+  'survey.diagnosis.selfReported':
+    'Basert på egne erfaringer, uten bekreftet diagnose',
+  'survey.diagnosis.unsure': 'Usikker på diagnosen / svarer på vegne av en annen',
+  'survey.reaction.section': 'Faktisk behov',
+  'survey.reaction.question': 'Hva har skjedd når du har spist mat du reagerer på?',
+  'survey.reaction.hint': 'Velg det som best beskriver erfaringene dine.',
+  'survey.reaction.mild':
+    'Jeg har fått milde symptomer, for eksempel kløe eller mageplager',
+  'survey.reaction.severe':
+    'Jeg har fått alvorlige symptomer eller trengt akutt behandling',
+  'survey.reaction.avoiding': 'Jeg unngår maten, men har ikke nylig blitt eksponert',
+  'survey.reaction.noSymptoms': 'Jeg har ikke merket symptomer ved inntak',
+  'survey.reaction.otherReason':
+    'Jeg unngår maten av andre grunner eller er usikker',
+  'survey.buyer.section': 'Marked og kjøpsatferd',
+  'survey.buyer.question': 'Hvilken rolle har du når allergivennlig mat kjøpes?',
+  'survey.buyer.self': 'Jeg kjøper mat hovedsakelig til meg selv',
+  'survey.buyer.parent': 'Jeg er forelder og kjøper mat til et barn',
+  'survey.buyer.household': 'Jeg kjøper mat til flere i husholdningen',
+  'survey.buyer.caregiver': 'Jeg handler for noen jeg hjelper eller har omsorg for',
+  'survey.buyer.notBuyer': 'Jeg er ikke den som vanligvis kjøper maten',
 };
 
 const dictionaries: Record<Locale, Record<TranslationKey, string>> = { en, nb };
@@ -1732,4 +1927,32 @@ export function translateFormat(
     text = text.replaceAll(`{${name}}`, String(value));
   }
   return text;
+}
+
+const ALLERGEN_NAMES_EN: Record<AllergenOption, string> = {
+  Gluten: 'Gluten',
+  Skalldyr: 'Crustaceans',
+  Egg: 'Eggs',
+  Fisk: 'Fish',
+  Peanøtter: 'Peanuts',
+  Soya: 'Soy',
+  Melk: 'Milk',
+  Laktose: 'Lactose',
+  Nøtter: 'Nuts',
+  Selleri: 'Celery',
+  Sennep: 'Mustard',
+  Sesamfrø: 'Sesame seeds',
+  'Svoveldioksid eller sulfitter': 'Sulphur dioxide or sulphites',
+  Lupiner: 'Lupin',
+  Bløtdyr: 'Molluscs',
+};
+
+/**
+ * Display name for an allergen label. Labels are stored in Norwegian (DB /
+ * ALLERGEN_OPTIONS); unknown labels are returned unchanged.
+ */
+export function translateAllergen(locale: Locale, label: string): string {
+  if (locale === 'nb') return label;
+  const option = resolveAllergenOption(label);
+  return option ? ALLERGEN_NAMES_EN[option] : label;
 }

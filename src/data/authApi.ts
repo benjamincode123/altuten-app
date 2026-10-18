@@ -1,4 +1,5 @@
 import { config } from '../config';
+import type { ProductCatalog } from '../db/types';
 import {
   AppError,
   appErrorFromHttp,
@@ -6,7 +7,7 @@ import {
 } from '../errors/appError';
 
 export interface FavoriteProductRef {
-  catalog: 'products' | 'products_se' | 'products_dk' | 'products_de';
+  catalog: ProductCatalog;
   id: number;
 }
 

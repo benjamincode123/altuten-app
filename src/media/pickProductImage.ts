@@ -12,7 +12,7 @@ export const MAX_PROFILE_IMAGE_BYTES = 500 * 1024;
 const MAX_PRODUCT_IMAGE_EDGE = 1280;
 
 /** Profile avatars are small on screen — keep edge tight for faster upload. */
-const MAX_PROFILE_IMAGE_EDGE = 720;
+const MAX_PROFILE_IMAGE_EDGE = 512;
 
 function estimateDecodedBytes(base64Payload: string): number {
   const cleaned = base64Payload.replace(/\s/g, '');
@@ -165,13 +165,26 @@ export async function pickProductImageDetailed(
   }
 }
 
+export type PickedProfileImageAsset = {
+  /** Local file URI — show this as an instant preview. */
+  uri: string;
+  width?: number;
+  height?: number;
+};
+
 /** Camera/gallery → JPEG data-URI compressed to max 500 KB. */
 export async function pickProfileImage(
   source: 'camera' | 'library'
 ): Promise<string | null> {
   const asset = await pickProductImageAsset(source);
   if (!asset) return null;
+  return compressProfileImage(asset);
+}
 
+/** Compress a picked profile photo to a JPEG data-URI (max 500 KB). */
+export async function compressProfileImage(
+  asset: PickedProfileImageAsset
+): Promise<string | null> {
   try {
     const dataUri = await compressToMaxBytes(
       asset.uri,
@@ -245,19 +258,30 @@ export function askPickIngredientsOcrImage(
 }
 
 export function askPickProfileImage(): Promise<string | null> {
+  return askPickProfileImageAsset().then((asset) =>
+    asset ? compressProfileImage(asset) : null
+  );
+}
+
+/** Camera/gallery picker for profile photos; returns the raw asset without compressing. */
+export function askPickProfileImageAsset(): Promise<PickedProfileImageAsset | null> {
+  const pick = (source: 'camera' | 'library') =>
+    pickProductImageAsset(source).then((asset) =>
+      asset ? { uri: asset.uri, width: asset.width, height: asset.height } : null
+    );
   return new Promise((resolve) => {
     Alert.alert('Profile photo', 'Choose a photo (max 500 KB).', [
       { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
       {
         text: 'Camera',
         onPress: () => {
-          void pickProfileImage('camera').then(resolve);
+          void pick('camera').then(resolve);
         },
       },
       {
         text: Platform.OS === 'ios' ? 'Photo Library' : 'Gallery',
         onPress: () => {
-          void pickProfileImage('library').then(resolve);
+          void pick('library').then(resolve);
         },
       },
     ]);

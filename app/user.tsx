@@ -30,7 +30,10 @@ import { isAppError } from '../src/errors/appError';
 import { userFacingError } from '../src/errors/userFacingError';
 import { useI18n } from '../src/i18n/I18nContext';
 import type { TranslationKey } from '../src/i18n/translations';
-import { askPickProfileImage } from '../src/media/pickProductImage';
+import {
+  askPickProfileImageAsset,
+  compressProfileImage,
+} from '../src/media/pickProductImage';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
 import { formatApiDateTime } from '../src/time/formatApiDate';
@@ -58,7 +61,7 @@ function profileImageUri(imageUrl: string | null | undefined): string | null {
   const raw = (imageUrl ?? '').trim();
   if (!raw) return null;
   if (raw.startsWith('data:image/')) return raw;
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  if (/^(https?|file|content|ph|assets-library):/.test(raw)) return raw;
   return `data:image/jpeg;base64,${raw}`;
 }
 
@@ -87,6 +90,8 @@ export default function UserScreen() {
   const [privacyError, setPrivacyError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  /** Picked photo shown while it is compressed and uploaded. */
+  const [photoPreviewUri, setPhotoPreviewUri] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [openingBilling, setOpeningBilling] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -229,15 +234,18 @@ export default function UserScreen() {
   async function handleChangePhoto() {
     if (!authEnabled || !user || photoBusy) return;
     setPhotoError(null);
-    const uri = await askPickProfileImage();
-    if (!uri) return;
-    // Optimistic preview is applied inside setProfileImage; keep spinner only for upload.
+    const asset = await askPickProfileImageAsset();
+    if (!asset) return;
+    setPhotoPreviewUri(asset.uri);
     setPhotoBusy(true);
     try {
-      await setProfileImage(uri);
+      const dataUri = await compressProfileImage(asset);
+      if (!dataUri) return;
+      await setProfileImage(dataUri, asset.uri);
     } catch (err) {
       setPhotoError(userFacingError(err, t, 'generic') || t('profile.photoError'));
     } finally {
+      setPhotoPreviewUri(null);
       setPhotoBusy(false);
     }
   }
@@ -248,7 +256,7 @@ export default function UserScreen() {
   const toNext = xpProfile?.xpToNextLevel ?? 0;
   const isMaxXpLevel = xpProfile != null && (xpLevel >= 99 || toNext <= 0 && progress >= 1);
   const history = xpProfile?.history ?? [];
-  const avatarUri = profileImageUri(user?.profileImageUrl);
+  const avatarUri = photoPreviewUri ?? profileImageUri(user?.profileImageUrl);
   const adminBadgeLabel = formatAdminBadgeCount(adminPendingTotal);
 
   function renderHistoryReason(item: XpHistoryItem): string {
@@ -294,8 +302,8 @@ export default function UserScreen() {
           />
         )}
         {photoBusy ? (
-          <View style={styles.avatarBusy}>
-            <ActivityIndicator color={colors.onPrimary} />
+          <View style={[styles.avatarEditBadge, { backgroundColor: colors.primary }]}>
+            <ActivityIndicator size="small" color={colors.onPrimary} />
           </View>
         ) : authEnabled && user ? (
           <View style={[styles.avatarEditBadge, { backgroundColor: colors.primary }]}>
@@ -596,13 +604,6 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     borderWidth: 2,
-  },
-  avatarBusy: {
-    ...StyleSheet.absoluteFill,
-    borderRadius: 44,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   avatarEditBadge: {
     position: 'absolute',

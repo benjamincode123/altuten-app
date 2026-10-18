@@ -3,7 +3,6 @@ import * as Location from 'expo-location';
 import {
   isProductCountry,
   orderProductCountries,
-  PRODUCT_COUNTRIES,
   type ProductCountry,
 } from './productCountries';
 
@@ -55,8 +54,8 @@ export function suggestLocaleFromIsoCountry(
 
 /**
  * Best-effort GPS → catalog country. Cached for the app session.
- * Returns null when permission is denied, location fails, or the country
- * is outside NO/SE/DK/DE (search catalogs).
+ * Returns null when permission is denied or location fails; any ISO-2 country
+ * is accepted, since the backend has a catalog table for each.
  */
 export async function detectGpsProductCountry(): Promise<ProductCountry | null> {
   if (cachedGpsCountry !== undefined) {
@@ -82,13 +81,21 @@ export async function detectGpsProductCountry(): Promise<ProductCountry | null> 
   return inflight;
 }
 
-/** Selected (or all) catalog countries with GPS country first when known. */
+/**
+ * Catalog countries to try first, GPS country leading.
+ *
+ * With no explicit filter this returns just the GPS country (or nothing), so
+ * the backend searches that catalog first and then falls back to every other
+ * one by itself — the app never has to enumerate the countries.
+ */
 export async function getPreferredProductCountries(
   selected?: readonly ProductCountry[]
 ): Promise<ProductCountry[]> {
   const gps = await detectGpsProductCountry();
-  const base = selected && selected.length > 0 ? selected : PRODUCT_COUNTRIES;
-  return orderProductCountries(base, gps);
+  if (selected && selected.length > 0) {
+    return orderProductCountries(selected, gps);
+  }
+  return gps ? [gps] : [];
 }
 
 export type GpsSubmissionLocation = {

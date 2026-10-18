@@ -16,7 +16,7 @@ import {
 
 import { useAuth } from '../auth/AuthContext';
 import { getAuthToken } from '../auth/session';
-import type { ProductCountry } from '../country/productCountries';
+import { countryForCatalogTable } from '../country/productCountries';
 import type { FavoriteProductRef } from '../data/authApi';
 import * as adminApi from '../data/adminApi';
 import { getProductRepository } from '../data/repository';
@@ -29,18 +29,6 @@ import { ErrorText } from './ErrorText';
 
 const SHEET_SLIDE = Math.round(Dimensions.get('window').height * 0.55);
 
-function catalogToCountry(catalog: ProductCatalog): ProductCountry {
-  switch (catalog) {
-    case 'products_se':
-      return 'se';
-    case 'products_dk':
-      return 'dk';
-    case 'products_de':
-      return 'de';
-    default:
-      return 'no';
-  }
-}
 
 interface SuggestMergeModalProps {
   visible: boolean;
@@ -147,7 +135,8 @@ export function SuggestMergeModal({
         setSearching(true);
         try {
           const page = await getProductRepository().searchByName(trimmed, 20, {
-            countries: [catalogToCountry(product.catalog as ProductCatalog)],
+            // A merge target has to live in the same catalog as the source.
+            countries: [countryForCatalogTable(product.catalog)],
           });
           if (cancelled) return;
           setResults(

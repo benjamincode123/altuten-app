@@ -43,7 +43,7 @@ import { userFacingError } from '../src/errors/userFacingError';
 import { detectGpsProductCountry } from '../src/country/detectProductCountry';
 import {
   orderProductCountries,
-  PRODUCT_COUNTRIES,
+  SEARCH_COUNTRIES,
   type ProductCountry,
 } from '../src/country/productCountries';
 import { useI18n } from '../src/i18n/I18nContext';
@@ -51,8 +51,8 @@ import { isUnknownBarcode, Product, ProductCatalog } from '../src/db/types';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
 
-/** Always search every catalog; GPS only reorders merge priority. */
-const ALL_SEARCH_COUNTRIES: ProductCountry[] = [...PRODUCT_COUNTRIES];
+/** Every country the filter offers; GPS only reorders merge priority. */
+const ALL_SEARCH_COUNTRIES: ProductCountry[] = [...SEARCH_COUNTRIES];
 
 /** Wait for typing to settle before hitting the API. */
 const SEARCH_DEBOUNCE_MS = 400;
@@ -62,14 +62,7 @@ const RESULTS_FADE_MS = 300;
 const REFRESH_BANNER_DELAY_MS = 280;
 
 function canFavoriteProduct(item: Product): item is Product & { catalog: ProductCatalog } {
-  return (
-    !!item.catalog &&
-    item.id > 0 &&
-    (item.catalog === 'products' ||
-      item.catalog === 'products_se' ||
-      item.catalog === 'products_dk' ||
-      item.catalog === 'products_de')
-  );
+  return !!item.catalog && item.id > 0;
 }
 
 export default function ProductsScreen() {

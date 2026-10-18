@@ -1,15 +1,24 @@
-export type ProductCountry = 'no' | 'se' | 'dk' | 'de';
+/**
+ * Catalog country code (ISO 3166-1 alpha-2, lower case). The backend defines
+ * one products_<code> table per country, so any code may come back from a scan.
+ */
+export type ProductCountry = string;
 
-/** All catalog countries, stable fallback order NO → SE → DK → DE. */
-export const PRODUCT_COUNTRIES: ProductCountry[] = ['no', 'se', 'dk', 'de'];
+const COUNTRY_PATTERN = /^[a-z]{2}$/;
 
 export function isProductCountry(value: unknown): value is ProductCountry {
-  return value === 'no' || value === 'se' || value === 'dk' || value === 'de';
+  return typeof value === 'string' && COUNTRY_PATTERN.test(value);
 }
 
 /**
+ * Countries offered in the search filter. Deliberately short: this is a picker
+ * the user taps through, not the set of catalogs the app can read.
+ */
+export const SEARCH_COUNTRIES: ProductCountry[] = ['no', 'se', 'dk', 'de'];
+
+/**
  * Order selected countries with an optional preferred country first (GPS).
- * Remaining countries keep the stable PRODUCT_COUNTRIES order.
+ * Remaining countries keep the stable SEARCH_COUNTRIES order.
  */
 export function orderProductCountries(
   selected: readonly ProductCountry[],
@@ -20,8 +29,14 @@ export function orderProductCountries(
   if (preferredFirst && set.has(preferredFirst)) {
     next.push(preferredFirst);
   }
-  for (const code of PRODUCT_COUNTRIES) {
+  for (const code of SEARCH_COUNTRIES) {
     if (set.has(code) && code !== preferredFirst) {
+      next.push(code);
+    }
+  }
+  // Anything outside the picker list (e.g. a GPS country) keeps its own order.
+  for (const code of selected) {
+    if (!next.includes(code)) {
       next.push(code);
     }
   }
@@ -43,4 +58,16 @@ export function toggleProductCountry(
     );
   }
   return orderProductCountries([...selected, code], preferredFirst);
+}
+
+/** Catalog table a country code maps to, mirroring the backend registry. */
+export function catalogTableForCountry(country: ProductCountry): string {
+  const code = country.trim().toLowerCase();
+  return code === 'no' || code.length === 0 ? 'products' : `products_${code}`;
+}
+
+/** Country code behind a catalog table name (`products_de` → `de`). */
+export function countryForCatalogTable(catalog: string): ProductCountry {
+  const match = /^products_([a-z]{2})$/.exec(catalog.trim().toLowerCase());
+  return match ? match[1] : 'no';
 }

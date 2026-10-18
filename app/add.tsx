@@ -46,6 +46,7 @@ import { useI18n } from '../src/i18n/I18nContext';
 import {
   GlutenRating,
   isUnknownBarcode,
+  parseProductCatalog,
   Product,
   ProductCatalog,
 } from '../src/db/types';
@@ -60,19 +61,6 @@ import { userFacingError } from '../src/errors/userFacingError';
 import { goHome } from '../src/navigation/goHome';
 import { useReliableBackHeader } from '../src/navigation/useReliableBackHeader';
 import { useTheme } from '../src/theme/ThemeContext';
-function parseCatalog(value: string | undefined): ProductCatalog | null {
-  if (
-    value === 'products' ||
-    value === 'products_se' ||
-    value === 'products_dk' ||
-    value === 'products_de'
-  ) {
-    return value;
-  }
-  return null;
-}
-
-
 type ChipAccent = { color: string; backgroundColor: string };
 
 function AllergenDropdownRow({
@@ -130,7 +118,7 @@ export default function AddProductScreen() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
   const { colors } = useTheme();
-  const { t, tf } = useI18n();
+  const { t, tf, allergenName } = useI18n();
   const params = useLocalSearchParams<{
     barcode?: string;
     id?: string;
@@ -142,7 +130,7 @@ export default function AddProductScreen() {
     params.aiFocus === '1' ||
     params.aiFocus === 'true' ||
     params.aiFocus === 'yes';
-  const editCatalog = parseCatalog((params.catalog ?? '').toString());
+  const editCatalog = parseProductCatalog((params.catalog ?? '').toString());
   const editId = Number.parseInt((params.id ?? '').toString(), 10);
   const hasEditTarget =
     editCatalog != null && Number.isFinite(editId) && editId > 0;
@@ -1331,7 +1319,7 @@ export default function AddProductScreen() {
                 ]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
-                accessibilityLabel={`${t('add.allergenContains')}: ${allergen}`}
+                accessibilityLabel={`${t('add.allergenContains')}: ${allergenName(allergen)}`}
               >
                 <Text
                   style={[
@@ -1339,7 +1327,7 @@ export default function AddProductScreen() {
                     { color: active ? CONTAINS_CHIP.color : colors.text },
                   ]}
                 >
-                  {allergen}
+                  {allergenName(allergen)}
                 </Text>
               </Pressable>
             );
@@ -1375,7 +1363,7 @@ export default function AddProductScreen() {
                 ]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
-                accessibilityLabel={`${t('add.allergenMayContain')}: ${allergen}`}
+                accessibilityLabel={`${t('add.allergenMayContain')}: ${allergenName(allergen)}`}
               >
                 <Text
                   style={[
@@ -1383,7 +1371,7 @@ export default function AddProductScreen() {
                     { color: active ? TRACES_CHIP.color : colors.text },
                   ]}
                 >
-                  {allergen}
+                  {allergenName(allergen)}
                 </Text>
               </Pressable>
             );

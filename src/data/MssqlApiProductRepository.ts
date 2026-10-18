@@ -1,9 +1,12 @@
 import { getAuthToken } from '../auth/session';
+import { type ProductCountry } from '../country/productCountries';
 import {
-  PRODUCT_COUNTRIES,
-  type ProductCountry,
-} from '../country/productCountries';
-import { isGlutenRating, NewProduct, Product, ProductCatalog } from '../db/types';
+  isGlutenRating,
+  NewProduct,
+  parseProductCatalog,
+  Product,
+  ProductCatalog,
+} from '../db/types';
 import {
   AppError,
   AppErrorCode,
@@ -18,6 +21,10 @@ import {
 } from './ProductRepository';
 import { MIN_PRODUCT_SEARCH_CHARS } from './searchLimits';
 
+/**
+ * Countries to send as a preference. Empty means "no preference" — the API then
+ * searches every catalog table, so the app never enumerates the countries.
+ */
 function resolveCountries(options?: ProductLookupOptions): ProductCountry[] {
   if (options?.countries && options.countries.length > 0) {
     return options.countries;
@@ -25,8 +32,7 @@ function resolveCountries(options?: ProductLookupOptions): ProductCountry[] {
   if (options?.country) {
     return [options.country];
   }
-  // Default: search every catalog country (scanner / barcode / unfiltered).
-  return [...PRODUCT_COUNTRIES];
+  return [];
 }
 
 /** Raw JSON shape returned by the .NET API (camelCase + snake_case extras). */
@@ -56,15 +62,7 @@ interface ProductApiResponse {
 }
 
 function mapCatalog(value: string | undefined): ProductCatalog | undefined {
-  if (
-    value === 'products' ||
-    value === 'products_se' ||
-    value === 'products_dk' ||
-    value === 'products_de'
-  ) {
-    return value;
-  }
-  return undefined;
+  return parseProductCatalog(value) ?? undefined;
 }
 
 function mapAllergens(
@@ -165,12 +163,12 @@ export class MssqlApiProductRepository implements ProductRepository {
       return null;
     }
     const countries = resolveCountries(options);
-    const params = new URLSearchParams();
-    params.set('countries', countries.join(','));
+    const query =
+      countries.length > 0
+        ? `?countries=${encodeURIComponent(countries.join(','))}`
+        : '';
     const response = await this.request(
-      this.productsUrl(
-        `/${encodeURIComponent(trimmed)}?${params.toString()}`
-      ),
+      this.productsUrl(`/${encodeURIComponent(trimmed)}${query}`),
       { headers: this.requireAuthHeaders() },
       'lookup_failed'
     );
@@ -239,8 +237,10 @@ export class MssqlApiProductRepository implements ProductRepository {
       q,
       limit: String(pageSize),
       page: String(page),
-      countries: countries.join(','),
     });
+    if (countries.length > 0) {
+      params.set('countries', countries.join(','));
+    }
     if (options?.unknownOnly) {
       params.set('unknownOnly', 'true');
     }

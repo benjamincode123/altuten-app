@@ -62,12 +62,27 @@ export function isGlutenRating(value: string): value is GlutenRating {
   return ALL_GLUTEN_RATINGS.includes(value as GlutenRating);
 }
 
-/** Which catalog table a product came from (API). */
-export type ProductCatalog =
-  | 'products'
-  | 'products_se'
-  | 'products_dk'
-  | 'products_de';
+/**
+ * Which catalog table a product came from (API). The backend registry defines
+ * one table per country, so the app accepts any of them rather than a fixed
+ * list — a barcode scan can resolve to any country's catalog.
+ */
+export type ProductCatalog = 'products' | `products_${string}`;
+
+/** `products` (primary/NO) or `products_<iso2>`, matching catalog-tables.json. */
+const PRODUCT_CATALOG_PATTERN = /^products(?:_[a-z]{2})?$/;
+
+export function isProductCatalog(value: unknown): value is ProductCatalog {
+  return typeof value === 'string' && PRODUCT_CATALOG_PATTERN.test(value);
+}
+
+/** Normalize an API/route value into a catalog, or null when unusable. */
+export function parseProductCatalog(
+  value: string | null | undefined
+): ProductCatalog | null {
+  const key = (value ?? '').trim().toLowerCase();
+  return isProductCatalog(key) ? key : null;
+}
 
 export interface ProductAllergens {
   inneholder: string[];

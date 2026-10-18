@@ -30,6 +30,7 @@ import {
 import { setSessionExpiredHandler } from './sessionExpired';
 import { clearCachedLeaderboard } from '../data/leaderboardCache';
 import { clearCachedLists } from '../data/listsCache';
+import { clearCachedFoodNeedsSurvey } from '../survey/foodNeedsSurveyCache';
 
 /**
  * When the backend is disabled (local SQLite mode) there is no auth server, so
@@ -105,7 +106,11 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setPublicUser: (publicUser: boolean) => Promise<void>;
-  setProfileImage: (imageBase64: string | null) => Promise<void>;
+  /**
+   * Upload a new profile photo. `previewUri` (e.g. the local picked file) is
+   * shown instantly and kept for the session so the avatar never re-downloads.
+   */
+  setProfileImage: (imageBase64: string | null, previewUri?: string) => Promise<void>;
   addFavorite: (favorite: authApi.FavoriteProductRef) => Promise<void>;
   removeFavorite: (favorite: authApi.FavoriteProductRef) => Promise<void>;
   /** Local badge update — removes one unread notification id without a network round-trip. */
@@ -126,6 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const favoritesSyncGenerationRef = useRef(0);
   /** Bumps on sign-in/out so in-flight profile refreshes cannot re-login after logout. */
   const authGenerationRef = useRef(0);
+  /**
+   * Photo uploaded this session. While the server still reports `serverUrl`,
+   * show `uri` instead — avoids a re-download and stale image caches when the
+   * server reuses the same URL for a new photo.
+   */
+  const localAvatarRef = useRef<{ serverUrl: string | null; uri: string } | null>(null);
 
   const rememberSyncedFavorites = useCallback((favorites: FavoriteProductRef[]) => {
     const cloned = cloneFavorites(favorites);
@@ -269,10 +280,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = result.token;
 
     // Critical path: activate session in memory and navigate — no SecureStore awaits.
+    localAvatarRef.current = null;
     setAuthToken(token);
     clearProfileCacheMemory();
     clearCachedLeaderboard();
     clearCachedLists();
+    clearCachedFoodNeedsSurvey();
     rememberSyncedFavorites(result.user.favorites ?? []);
     setUser(result.user);
 
@@ -309,6 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearFavoritesSyncTimer();
     favoritesSyncGenerationRef.current += 1;
     authGenerationRef.current += 1;
+    localAvatarRef.current = null;
     const token = getAuthToken();
 
     // Clear local session first so the UI never waits on network.
@@ -316,6 +330,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await clearProfileCache();
     clearCachedLeaderboard();
     clearCachedLists();
+    clearCachedFoodNeedsSurvey();
     syncedFavoritesRef.current = [];
     latestFavoritesRef.current = [];
     setUser(null);
@@ -390,55 +405,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setProfileImage = useCallback(async (imageBase64: string | null) => {
-    if (!config.useBackend) {
+  const setProfileImage = useCallback(
+    async (imageBase64: string | null, previewUri?: string) => {
+      const shownUri = imageBase64 ? (previewUri ?? imageBase64) : null;
+      if (!config.useBackend) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, profileImageUrl: imageBase64 };
+          void saveCachedUser(next);
+          return next;
+        });
+        return;
+      }
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('unauthorized');
+      }
+
+      // Show the new photo immediately while the upload finishes.
+      const previousLocal = localAvatarRef.current;
+      let previousUrl: string | null = null;
+      localAvatarRef.current = null;
       setUser((prev) => {
         if (!prev) return prev;
-        const next = { ...prev, profileImageUrl: imageBase64 };
+        previousUrl = prev.profileImageUrl ?? null;
+        const next = { ...prev, profileImageUrl: shownUri };
         void saveCachedUser(next);
         return next;
       });
-      return;
-    }
-    const token = getAuthToken();
-    if (!token) {
-      throw new Error('unauthorized');
-    }
 
-    // Show the new photo immediately while the upload finishes.
-    let previousUrl: string | null = null;
-    setUser((prev) => {
-      if (!prev) return prev;
-      previousUrl = prev.profileImageUrl ?? null;
-      const next = { ...prev, profileImageUrl: imageBase64 };
-      void saveCachedUser(next);
-      return next;
-    });
-
-    try {
-      const updated = await authApi.setProfileImage(token, imageBase64);
-      setUser((prev) => {
-        if (!prev) return updated;
-        const next = {
-          ...prev,
-          ...updated,
-          favorites: prev.favorites,
-          // Prefer server blob URL; fall back to the local preview we already show.
-          profileImageUrl: updated.profileImageUrl ?? imageBase64,
-        };
-        void saveCachedUser(next);
-        return next;
-      });
-    } catch (err) {
-      setUser((prev) => {
-        if (!prev) return prev;
-        const next = { ...prev, profileImageUrl: previousUrl };
-        void saveCachedUser(next);
-        return next;
-      });
-      throw err;
-    }
-  }, []);
+      try {
+        const updated = await authApi.setProfileImage(token, imageBase64);
+        const serverUrl = updated.profileImageUrl ?? imageBase64;
+        localAvatarRef.current = shownUri ? { serverUrl, uri: shownUri } : null;
+        setUser((prev) => {
+          if (!prev) return updated;
+          const next = {
+            ...prev,
+            ...updated,
+            favorites: prev.favorites,
+            profileImageUrl: serverUrl,
+          };
+          void saveCachedUser(next);
+          return next;
+        });
+      } catch (err) {
+        localAvatarRef.current = previousLocal;
+        setUser((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, profileImageUrl: previousUrl };
+          void saveCachedUser(next);
+          return next;
+        });
+        throw err;
+      }
+    },
+    []
+  );
 
   const addFavorite = useCallback(
     async (favorite: authApi.FavoriteProductRef) => {
@@ -505,9 +528,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const displayUser = useMemo(() => {
+    const local = localAvatarRef.current;
+    if (!user || !local) return user;
+    if ((user.profileImageUrl ?? null) !== local.serverUrl) return user;
+    return { ...user, profileImageUrl: local.uri };
+  }, [user]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
+      user: displayUser,
       initializing,
       isAdmin: user?.isAdmin ?? false,
       authEnabled: config.useBackend,
@@ -522,6 +552,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      displayUser,
       initializing,
       signIn,
       signOut,

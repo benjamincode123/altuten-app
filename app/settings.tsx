@@ -21,7 +21,7 @@ import { useTheme } from '../src/theme/ThemeContext';
 
 export default function SettingsScreen() {
   const { colors, isDark, setMode } = useTheme();
-  const { t, locale, setLocale } = useI18n();
+  const { t, locale, setLocale, allergenName } = useI18n();
   const { isSelected, toggle } = useAllergenPrefs();
   const {
     prefs,
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
                 ]}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
-                accessibilityLabel={allergen}
+                accessibilityLabel={allergenName(allergen)}
               >
                 <Text
                   style={[
@@ -227,7 +227,7 @@ export default function SettingsScreen() {
                     { color: active ? colors.onPrimary : colors.text },
                   ]}
                 >
-                  {allergen}
+                  {allergenName(allergen)}
                 </Text>
               </Pressable>
             );
