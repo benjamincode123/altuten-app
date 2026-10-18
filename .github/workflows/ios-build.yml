@@ -173,11 +173,22 @@ jobs:
 
       - name: Upload to TestFlight
         if: inputs.upload_to_testflight == true || startsWith(github.ref, 'refs/tags/ios-v')
+        env:
+          # altool could not map the bundle ID to the App Store Connect record
+          # ("Cannot determine the Apple ID from Bundle ID"), so the app's Apple
+          # ID is passed explicitly. It is public — it appears in App Store URLs.
+          APP_APPLE_ID: '6814603427'
+          BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
         run: |
           IPA_PATH="$(ls "$RUNNER_TEMP"/export/*.ipa | head -n 1)"
-          xcrun altool --upload-app \
+          SHORT_VERSION="$(node -e "console.log(require('./app.json').expo.version)")"
+          BUNDLE_ID="$(node -e "console.log(require('./app.json').expo.ios.bundleIdentifier)")"
+          xcrun altool --upload-package "$IPA_PATH" \
             --type ios \
-            --file "$IPA_PATH" \
+            --apple-id "$APP_APPLE_ID" \
+            --bundle-id "$BUNDLE_ID" \
+            --bundle-version "$BUILD_NUMBER" \
+            --bundle-short-version-string "$SHORT_VERSION" \
             --apiKey "$ASC_KEY_ID" \
             --apiIssuer "$ASC_ISSUER_ID"
 
