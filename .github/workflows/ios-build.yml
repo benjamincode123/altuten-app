@@ -26,7 +26,9 @@ concurrency:
 
 jobs:
   build:
-    runs-on: macos-15
+    # Expo SDK 57 pulls Swift packages built with Swift tools 6.2, which needs
+    # Xcode 26. The macos-15 image only ships Xcode 16.x (Swift 6.1).
+    runs-on: macos-26
     timeout-minutes: 90
 
     env:
@@ -45,9 +47,18 @@ jobs:
           node-version: 24
           cache: npm
 
+      # Pick the highest Xcode on the image rather than trusting its default,
+      # so a image refresh that adds a newer Xcode is picked up automatically.
+      - name: Select newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          LATEST="$(ls -d /Applications/Xcode*.app | sort -V | tail -n 1)"
+          sudo xcode-select -s "$LATEST/Contents/Developer"
+
       - name: Show toolchain
         run: |
           xcodebuild -version
+          swift --version
           node --version
 
       - name: Install dependencies
