@@ -38,9 +38,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Must match the Node/npm that generated package-lock.json: npm 10 (Node 20)
+      # nests peer deps differently and rejects the lock as out of sync.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Show toolchain
