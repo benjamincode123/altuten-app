@@ -2,14 +2,14 @@
   "expo": {
     "name": "AltUten",
     "slug": "altuten",
-    "version": "1.0.6",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "altuten",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.altuten.app",
+      "bundleIdentifier": "AltUten",
       "buildNumber": "9",
       "deploymentTarget": "16.4",
       "icon": "./assets/icon.png",
