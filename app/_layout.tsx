@@ -19,6 +19,7 @@ import { AllergenPrefsProvider } from '../src/allergens/AllergenPrefsContext';
 import { TermsAcceptanceScreen } from '../src/components/TermsAcceptanceScreen';
 import { config } from '../src/config';
 import { I18nProvider, useI18n } from '../src/i18n/I18nContext';
+import { ProductOutboxWatcher } from '../src/data/ProductOutboxWatcher';
 import { initDatabase } from '../src/db/database';
 import { hasAcceptedCurrentTerms } from '../src/legal/termsAcceptance';
 import { NotificationPrefsProvider } from '../src/notifications/NotificationPrefsContext';
@@ -118,6 +119,7 @@ export default function RootLayout() {
                 <AuthProvider>
                   <NotificationPrefsProvider>
                     <InboxAlertWatcher />
+                    <ProductOutboxWatcher />
                     <RootNavigator />
                   </NotificationPrefsProvider>
                 </AuthProvider>

@@ -38,14 +38,20 @@ import { GlutenBadge } from '../src/components/GlutenBadge';
 import { AppTextInput } from '../src/components/KeyboardDismissBar';
 import { InfoCard, InfoChipRow, InfoRow } from '../src/components/ProductInfoCard';
 import { ScanWithAiTutorialModal } from '../src/components/ScanWithAiTutorialModal';
+import type { GpsSubmissionLocation } from '../src/country/detectProductCountry';
 import { getGpsSubmissionLocation, getPreferredProductCountries } from '../src/country/detectProductCountry';
 import { getProductRepository } from '../src/data/repository';
 import { cachePendingProduct } from '../src/data/pendingProductCache';
+import {
+  enqueueProductSubmission,
+  flushProductSubmissions,
+} from '../src/data/productSubmissionOutbox';
 import { MIN_PRODUCT_SEARCH_CHARS } from '../src/data/searchLimits';
 import { useI18n } from '../src/i18n/I18nContext';
 import {
   GlutenRating,
   isUnknownBarcode,
+  NewProduct,
   parseProductCatalog,
   Product,
   ProductCatalog,
@@ -174,6 +180,17 @@ export default function AddProductScreen() {
     Extract<AllergenStatus, 'contains' | 'mayContain'> | null
   >(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Started on mount so the GPS fix is usually ready by the time the user
+  // saves — a cold location read takes seconds and used to block the save.
+  const gpsRef = useRef<Promise<GpsSubmissionLocation> | null>(null);
+
+  useEffect(() => {
+    if (isEditing) return;
+    gpsRef.current ??= getGpsSubmissionLocation();
+    // Warms the separate country cache that the duplicate-barcode check reads,
+    // so saving does not pay for a second cold location read.
+    void getPreferredProductCountries();
+  }, [isEditing]);
 
   useEffect(() => {
     if (!formError) return;
@@ -407,8 +424,8 @@ export default function AddProductScreen() {
         }
       }
 
-      const gps = !isEditing ? await getGpsSubmissionLocation() : null;
-      const saved = await getProductRepository().addProduct({
+      const gps = !isEditing ? await (gpsRef.current ??= getGpsSubmissionLocation()) : null;
+      const submission: NewProduct = {
         barcode: barcodeValue,
         name: name.trim(),
         produsent: produsent.trim() || null,
@@ -422,7 +439,36 @@ export default function AddProductScreen() {
         region: gps?.country ?? null,
         latitude: gps?.latitude ?? null,
         longitude: gps?.longitude ?? null,
-      });
+      };
+
+      // A member's new submission goes to admin review either way, so there is
+      // nothing in the response the user needs to see. Queue it, show it from
+      // the local cache, and upload in the background. Admin saves stay
+      // synchronous: they write straight to the live catalog, so the admin
+      // needs to know it actually landed.
+      if (!isEditing && !isAdmin) {
+        await cachePendingProduct({
+          id: 0,
+          barcode: barcodeValue,
+          name: name.trim(),
+          produsent: produsent.trim() || null,
+          ingredients: ingredients.trim() || null,
+          glutenRating: effectiveRating,
+          allergens: statusesToAllergens(allergenStatuses),
+          imageUrl: submissionImageBase64,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          pending: true,
+        });
+        await enqueueProductSubmission(submission);
+        void flushProductSubmissions();
+        Alert.alert(t('add.submittedTitle'), t('add.submittedBody'), [
+          { text: 'OK', onPress: () => router.dismissAll() },
+        ]);
+        return;
+      }
+
+      const saved = await getProductRepository().addProduct(submission);
       // Keep pending submissions on-device so the next scan still shows this product
       // until it (hopefully) lands in the live catalog within ~2 days.
       if (saved.pending || !isAdmin) {
