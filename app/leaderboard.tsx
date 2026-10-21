@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../src/auth/AuthContext';
 import { getAuthToken } from '../src/auth/session';
 import { ErrorText } from '../src/components/ErrorText';
@@ -65,6 +66,9 @@ export default function LeaderboardScreen() {
       if (cached) {
         setData(cached);
         setLoading(false);
+        if (!cached.prizes) {
+          void loadFromNetwork().catch(() => undefined);
+        }
         return;
       }
 
@@ -112,6 +116,14 @@ export default function LeaderboardScreen() {
         ? data?.week.entries ?? []
         : data?.month.entries ?? [];
 
+  const prize = (data?.prizes?.[period] ?? '').trim();
+  const prizeLabel =
+    period === 'day'
+      ? t('leaderboard.prizeDay')
+      : period === 'week'
+        ? t('leaderboard.prizeWeek')
+        : t('leaderboard.prizeMonth');
+
   function formatUpdated(iso: string | undefined): string {
     if (!iso) return '';
     return formatApiDateTime(iso, locale);
@@ -141,9 +153,22 @@ export default function LeaderboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        {t('leaderboard.subtitle')}
-      </Text>
+      {prize ? (
+        <View
+          style={[
+            styles.prize,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <MaterialCommunityIcons name="trophy" size={22} color={colors.primary} />
+          <View style={styles.prizeText}>
+            <Text style={[styles.prizeLabel, { color: colors.textSecondary }]}>
+              {prizeLabel}
+            </Text>
+            <Text style={[styles.prizeValue, { color: colors.text }]}>{prize}</Text>
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.tabs}>
         {(['day', 'week', 'month'] as PeriodKey[]).map((key) => {
@@ -216,12 +241,20 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 16 },
-  subtitle: {
-    paddingHorizontal: 20,
-    fontSize: 14,
-    lineHeight: 20,
+  prize: {
+    marginHorizontal: 20,
     marginBottom: 14,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
+  prizeText: { flex: 1 },
+  prizeLabel: { fontSize: 12, fontWeight: '600', marginBottom: 2 },
+  prizeValue: { fontSize: 20, fontWeight: '800' },
   tabs: {
     flexDirection: 'row',
     gap: 8,

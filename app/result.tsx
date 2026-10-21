@@ -46,6 +46,11 @@ import {
   clearPendingProduct,
   getPendingProductByBarcode,
 } from '../src/data/pendingProductCache';
+import {
+  cachePendingProductImage,
+  clearPendingProductImage,
+  getPendingProductImage,
+} from '../src/data/pendingProductImageCache';
 import { useI18n } from '../src/i18n/I18nContext';
 import {
   isUnknownBarcode,
@@ -74,6 +79,11 @@ function productImageUri(imageUrl: string | null | undefined): string | null {
   if (raw.startsWith('data:image/')) return raw;
   if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
   return `data:image/jpeg;base64,${raw}`;
+}
+
+function isHostedProductImage(imageUrl: string | null | undefined): boolean {
+  const raw = (imageUrl ?? '').trim();
+  return raw.startsWith('http://') || raw.startsWith('https://');
 }
 
 export default function ResultScreen() {
@@ -108,6 +118,7 @@ export default function ResultScreen() {
   const [mergeOpen, setMergeOpen] = useState(false);
   const [surveyOpen, setSurveyOpen] = useState(false);
   const [savedSurvey, setSavedSurvey] = useState<FoodNeedsSurveyResponse | null>(null);
+  const [imagePendingApproval, setImagePendingApproval] = useState(false);
 
   useReliableBackHeader({ title: t('nav.result') });
 
@@ -117,6 +128,7 @@ export default function ResultScreen() {
 
       async function load() {
         setState('loading');
+        setImagePendingApproval(false);
         setReportFeedback(null);
         try {
           const repo = getProductRepository();
@@ -137,7 +149,25 @@ export default function ResultScreen() {
 
           if (cancelled) return;
           if (found) {
-            setProduct(found);
+            let next = found;
+            let pendingImage = false;
+            if (found.catalog && found.id > 0) {
+              const localImage = await getPendingProductImage(
+                found.catalog,
+                found.id
+              );
+              if (localImage) {
+                if (isHostedProductImage(found.imageUrl)) {
+                  void clearPendingProductImage(found.catalog, found.id);
+                } else {
+                  next = { ...found, imageUrl: localImage };
+                  pendingImage = true;
+                }
+              }
+            }
+            if (cancelled) return;
+            setImagePendingApproval(pendingImage);
+            setProduct(next);
             setState('found');
           } else {
             setProduct(null);
@@ -205,21 +235,33 @@ export default function ResultScreen() {
     const picked = await askPickProductImage();
     if (!picked) return;
 
-    setReporting(true);
+    const catalog = product.catalog;
+    const productId = product.id;
+    // Show the photo immediately. Admin review can take a while; the submitter
+    // still needs to see their own image, same as a product they added.
+    setProduct((current) =>
+      current ? { ...current, imageUrl: picked } : current
+    );
+    setImagePendingApproval(true);
     setReportFeedback(null);
+    void cachePendingProductImage(catalog, productId, picked);
+
+    setReporting(true);
     try {
       const result = await getProductRepository().submitProductImage(
-        product.catalog,
-        product.id,
+        catalog,
+        productId,
         picked
       );
       if (result.product) {
         setProduct(result.product);
+        setImagePendingApproval(false);
+        void clearPendingProductImage(catalog, productId);
+        setReportFeedback({
+          kind: 'success',
+          text: t('result.photoSaved'),
+        });
       }
-      setReportFeedback({
-        kind: 'success',
-        text: result.pending ? t('result.photoPending') : t('result.photoSaved'),
-      });
     } catch (err) {
       setReportFeedback({
         kind: 'error',
@@ -411,7 +453,7 @@ export default function ResultScreen() {
               )}
             </Pressable>
           )}
-          {product.pending ? (
+          {product.pending || imagePendingApproval ? (
             <View
               style={[
                 styles.pendingBanner,
@@ -424,7 +466,9 @@ export default function ResultScreen() {
                 color={colors.primary}
               />
               <Text style={[styles.pendingBannerText, { color: colors.primary }]}>
-                {t('result.pendingLocal')}
+                {product.pending
+                  ? t('result.pendingLocal')
+                  : t('result.pendingImage')}
               </Text>
             </View>
           ) : null}

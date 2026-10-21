@@ -132,10 +132,9 @@ export default function AddProductScreen() {
     aiFocus?: string;
   }>();
   const initialBarcode = (params.barcode ?? '').toString();
+  const aiFocusFlag = (params.aiFocus ?? '').toString().toLowerCase();
   const aiFocus =
-    params.aiFocus === '1' ||
-    params.aiFocus === 'true' ||
-    params.aiFocus === 'yes';
+    aiFocusFlag === '1' || aiFocusFlag === 'true' || aiFocusFlag === 'yes';
   const editCatalog = parseProductCatalog((params.catalog ?? '').toString());
   const editId = Number.parseInt((params.id ?? '').toString(), 10);
   const hasEditTarget =
@@ -183,10 +182,14 @@ export default function AddProductScreen() {
   // Started on mount so the GPS fix is usually ready by the time the user
   // saves — a cold location read takes seconds and used to block the save.
   const gpsRef = useRef<Promise<GpsSubmissionLocation> | null>(null);
+  const gpsReadyRef = useRef<GpsSubmissionLocation | null>(null);
 
   useEffect(() => {
     if (isEditing) return;
-    gpsRef.current ??= getGpsSubmissionLocation();
+    gpsRef.current ??= getGpsSubmissionLocation().then((gps) => {
+      gpsReadyRef.current = gps;
+      return gps;
+    });
     // Warms the separate country cache that the duplicate-barcode check reads,
     // so saving does not pay for a second cold location read.
     void getPreferredProductCountries();
@@ -408,9 +411,54 @@ export default function AddProductScreen() {
     }
     setPhotoMissingError(false);
 
+    const barcodeValue = barcode.trim() || (allowEmptyBarcode ? 'unknown' : '');
+    const gps = !isEditing ? gpsReadyRef.current : null;
+    const submission: NewProduct = {
+      barcode: barcodeValue,
+      name: name.trim(),
+      produsent: produsent.trim() || null,
+      ingredients: ingredients.trim() || null,
+      glutenRating: effectiveRating,
+      allergens: statusesToAllergens(allergenStatuses),
+      imageBase64: submissionImageBase64,
+      id: isEditing && editingId ? editingId : undefined,
+      catalog: isEditing && editingCatalog ? editingCatalog : undefined,
+      country: gps?.country ?? null,
+      region: gps?.country ?? null,
+      latitude: gps?.latitude ?? null,
+      longitude: gps?.longitude ?? null,
+    };
+
+    // Allergnomen already came from a "not found" scan. Do not wait for a
+    // second barcode lookup, GPS, or the approval dialog — persist locally
+    // and send the user back to the scanner immediately.
+    if (aiFocus) {
+      try {
+        await cachePendingProduct({
+          id: 0,
+          barcode: barcodeValue,
+          name: name.trim(),
+          produsent: produsent.trim() || null,
+          ingredients: ingredients.trim() || null,
+          glutenRating: effectiveRating,
+          allergens: statusesToAllergens(allergenStatuses),
+          imageUrl: submissionImageBase64,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          pending: true,
+        });
+        await enqueueProductSubmission(submission);
+      } catch {
+        setFormError(t('errors.saveFailed'));
+        return;
+      }
+      void flushProductSubmissions();
+      goHome(router);
+      return;
+    }
+
     setSaving(true);
     try {
-      const barcodeValue = barcode.trim() || (allowEmptyBarcode ? 'unknown' : '');
       // Block new adds when the barcode already exists in the catalog.
       if (!isEditing && barcodeValue && barcodeValue.toLowerCase() !== 'unknown') {
         const countries = await getPreferredProductCountries();
@@ -424,22 +472,15 @@ export default function AddProductScreen() {
         }
       }
 
-      const gps = !isEditing ? await (gpsRef.current ??= getGpsSubmissionLocation()) : null;
-      const submission: NewProduct = {
-        barcode: barcodeValue,
-        name: name.trim(),
-        produsent: produsent.trim() || null,
-        ingredients: ingredients.trim() || null,
-        glutenRating: effectiveRating,
-        allergens: statusesToAllergens(allergenStatuses),
-        imageBase64: submissionImageBase64,
-        id: isEditing && editingId ? editingId : undefined,
-        catalog: isEditing && editingCatalog ? editingCatalog : undefined,
-        country: gps?.country ?? null,
-        region: gps?.country ?? null,
-        latitude: gps?.latitude ?? null,
-        longitude: gps?.longitude ?? null,
-      };
+      const awaitedGps = !isEditing
+        ? await (gpsRef.current ??= getGpsSubmissionLocation())
+        : null;
+      if (awaitedGps) {
+        submission.country = awaitedGps.country ?? null;
+        submission.region = awaitedGps.country ?? null;
+        submission.latitude = awaitedGps.latitude ?? null;
+        submission.longitude = awaitedGps.longitude ?? null;
+      }
 
       // A member's new submission goes to admin review either way, so there is
       // nothing in the response the user needs to see. Queue it, show it from
@@ -483,6 +524,10 @@ export default function AddProductScreen() {
           imageUrl: saved.imageUrl ?? submissionImageBase64 ?? null,
           pending: true,
         });
+      }
+      if (aiFocus) {
+        goHome(router);
+        return;
       }
       Alert.alert(
         saved.pending ? t('add.submittedTitle') : t('add.savedTitle'),

@@ -472,29 +472,35 @@ export default function ScannerScreen() {
                   <View style={styles.coachTail} />
                 </Pressable>
               ) : null}
-              <Animated.View style={{ transform: [{ scale: scanPulse }] }}>
-                <Pressable
-                  onPressIn={startHolding}
-                  onPressOut={stopHolding}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('scanner.holdA11y')}
-                  style={[
-                    styles.scanButton,
-                    {
-                      backgroundColor: scanInk,
-                      borderColor: isDark
-                        ? 'rgba(15,17,21,0.35)'
-                        : 'rgba(255,255,255,0.85)',
-                    },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name="barcode-scan"
-                    size={36}
-                    color={scanOnInk}
-                  />
-                </Pressable>
-              </Animated.View>
+              <Pressable
+                onPressIn={startHolding}
+                onPressOut={stopHolding}
+                accessibilityRole="button"
+                accessibilityLabel={t('scanner.holdA11y')}
+                style={styles.scanHit}
+                hitSlop={12}
+              >
+                <Animated.View style={{ transform: [{ scale: scanPulse }] }}>
+                  <View
+                    style={[
+                      styles.scanButton,
+                      {
+                        backgroundColor: scanInk,
+                        borderColor: isDark
+                          ? 'rgba(15,17,21,0.35)'
+                          : 'rgba(255,255,255,0.85)',
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <MaterialCommunityIcons
+                      name="barcode-scan"
+                      size={36}
+                      color={scanOnInk}
+                    />
+                  </View>
+                </Animated.View>
+              </Pressable>
             </View>
           </View>
         </View>
@@ -871,6 +877,13 @@ const styles = StyleSheet.create({
     height: 12,
     backgroundColor: '#FFFFFF',
     transform: [{ rotate: '45deg' }],
+  },
+  // Larger than the visible circle so a slightly-off hold still starts a scan.
+  scanHit: {
+    width: 128,
+    height: 128,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanButton: {
     width: 76,

@@ -22,9 +22,16 @@ export interface LeaderboardPeriod {
   entries: LeaderboardEntry[];
 }
 
+export interface LeaderboardPrizes {
+  day: string;
+  week: string;
+  month: string;
+}
+
 export interface LeaderboardSnapshot {
   generatedAtUtc: string;
   nextRefreshUtc: string;
+  prizes: LeaderboardPrizes;
   day: LeaderboardPeriod;
   week: LeaderboardPeriod;
   month: LeaderboardPeriod;
@@ -32,6 +39,15 @@ export interface LeaderboardSnapshot {
 
 function leaderboardUrl(): string {
   return `${config.apiBaseUrl.replace(/\/+$/, '')}/api/leaderboard`;
+}
+
+function parsePrizes(value: unknown): LeaderboardPrizes {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    day: typeof raw.day === 'string' ? raw.day : '',
+    week: typeof raw.week === 'string' ? raw.week : '',
+    month: typeof raw.month === 'string' ? raw.month : '',
+  };
 }
 
 export async function fetchLeaderboard(token: string): Promise<LeaderboardSnapshot> {
@@ -47,5 +63,6 @@ export async function fetchLeaderboard(token: string): Promise<LeaderboardSnapsh
     const apiError = await readApiErrorMessage(response);
     throw appErrorFromHttp(response.status, apiError, 'unauthorized');
   }
-  return (await response.json()) as LeaderboardSnapshot;
+  const body = (await response.json()) as LeaderboardSnapshot;
+  return { ...body, prizes: parsePrizes(body.prizes) };
 }

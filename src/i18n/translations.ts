@@ -115,7 +115,9 @@ type TranslationKey =
   | 'scanner.profile'
   | 'scanner.settings'
   | 'scanner.leaderboard'
-  | 'leaderboard.subtitle'
+  | 'leaderboard.prizeDay'
+  | 'leaderboard.prizeWeek'
+  | 'leaderboard.prizeMonth'
   | 'leaderboard.day'
   | 'leaderboard.week'
   | 'leaderboard.month'
@@ -344,6 +346,7 @@ type TranslationKey =
   | 'result.productImageA11y'
   | 'result.country'
   | 'result.pendingLocal'
+  | 'result.pendingImage'
   | 'result.allergenWarnTitle'
   | 'result.allergenContains'
   | 'result.allergenMayContain'
@@ -717,7 +720,9 @@ const en: Record<TranslationKey, string> = {
   'scanner.profile': 'Profile',
   'scanner.settings': 'Settings',
   'scanner.leaderboard': 'Leaderboard',
-  'leaderboard.subtitle': 'Top 100 Contributors',
+  'leaderboard.prizeDay': "Today's prize",
+  'leaderboard.prizeWeek': "This week's prize",
+  'leaderboard.prizeMonth': "This month's prize",
   'leaderboard.day': 'Day',
   'leaderboard.week': 'Week',
   'leaderboard.month': 'Month',
@@ -961,6 +966,8 @@ const en: Record<TranslationKey, string> = {
   'result.country': 'Country of origin',
   'result.pendingLocal':
     'Your submission — visible here while awaiting approval',
+  'result.pendingImage':
+    'Your photo — visible here for you while awaiting approval',
   'result.allergenWarnTitle': 'Allergen warning',
   'result.allergenContains': 'Contains {name}',
   'result.allergenMayContain': 'May contain {name}',
@@ -1378,7 +1385,9 @@ const nb: Record<TranslationKey, string> = {
   'scanner.profile': 'Profil',
   'scanner.settings': 'Innstillinger',
   'scanner.leaderboard': 'Ledertavle',
-  'leaderboard.subtitle': 'Top 100 Bidragsytere',
+  'leaderboard.prizeDay': 'Dagens premie',
+  'leaderboard.prizeWeek': 'Ukens premie',
+  'leaderboard.prizeMonth': 'Månedens premie',
   'leaderboard.day': 'Dag',
   'leaderboard.week': 'Uke',
   'leaderboard.month': 'Måned',
@@ -1622,6 +1631,8 @@ const nb: Record<TranslationKey, string> = {
   'result.country': 'Opprinnelsesland',
   'result.pendingLocal':
     'Din innsending — synlig her mens den venter på godkjenning',
+  'result.pendingImage':
+    'Bildet ditt — synlig her for deg mens det venter på godkjenning',
   'result.allergenWarnTitle': 'Allergenvarsel',
   'result.allergenContains': 'Inneholder {name}',
   'result.allergenMayContain': 'Kan inneholde {name}',
