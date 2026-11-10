@@ -12,11 +12,14 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type ComponentRef,
 } from 'react';
 import {
   Animated,
+  Image,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -25,7 +28,17 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../src/auth/AuthContext';
+import {
+  addChefItem,
+  CHEF_MIN_ITEMS,
+  clearChefItems,
+  removeChefItem,
+  useChefItems,
+} from '../src/chef/chefBasket';
+import { ChefChip } from '../src/chef/ChefChip';
 import { ScannerCamera } from '../src/components/ScannerCamera';
+import { getPreferredProductCountries } from '../src/country/detectProductCountry';
+import { getProductRepository } from '../src/data/repository';
 import { useI18n } from '../src/i18n/I18nContext';
 import {
   markHoldToScanCoachSeen,
@@ -35,6 +48,8 @@ import { useTheme } from '../src/theme/ThemeContext';
 
 type MenuIcon = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
+const CHEF_IMAGE = require('../assets/allergnom/chef.png');
+
 export default function ScannerScreen() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -42,7 +57,7 @@ export default function ScannerScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const { user, authEnabled, refreshUser } = useAuth();
   const { colors, isDark } = useTheme();
-  const { t } = useI18n();
+  const { t, tf } = useI18n();
   const scanInk = colors.primary;
   const scanOnInk = colors.onPrimary;
   const [permission, requestPermission] = useCameraPermissions();
@@ -54,6 +69,16 @@ export default function ScannerScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHoldCoach, setShowHoldCoach] = useState(false);
   const holdCoachDismissedRef = useRef(false);
+  const [chefMode, setChefMode] = useState(false);
+  const chefItems = useChefItems();
+  const chefModeRef = useRef(false);
+  const chefChipsRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const newestChefKey = chefItems[0]?.key;
+
+  // Newest chip is first — bring it into view so its pop is seen.
+  useEffect(() => {
+    if (newestChefKey) chefChipsRef.current?.scrollTo({ x: 0, animated: true });
+  }, [newestChefKey]);
 
   const drawerWidth = screenWidth * 0.25;
   const menuProgress = useRef(new Animated.Value(0)).current;
@@ -181,6 +206,40 @@ export default function ScannerScreen() {
     [router]
   );
 
+  const toggleChefMode = useCallback(() => {
+    // Recipes need a signed-in member, same as lists.
+    if (!authEnabled || !user) {
+      router.push('/login');
+      return;
+    }
+    const next = !chefModeRef.current;
+    chefModeRef.current = next;
+    setChefMode(next);
+  }, [authEnabled, user, router]);
+
+  /**
+   * Chef mode: look the barcode up and keep it in the basket instead of opening it.
+   * No overlay feedback on the camera — the chip list and badge show the result.
+   */
+  const addScannedToChef = useCallback(async (barcode: string) => {
+    try {
+      const countries = await getPreferredProductCountries();
+      const product = await getProductRepository().getByBarcode(barcode, { countries });
+      if (!product || !product.catalog || !(product.id > 0)) return;
+      addChefItem({
+        barcode,
+        catalog: product.catalog,
+        id: product.id,
+        name: product.name?.trim() || barcode,
+      });
+    } catch {
+      // Lookup failed; the user can simply scan again.
+    } finally {
+      // Ready for the next hold; chef mode keeps the user on this screen.
+      if (isFocusedRef.current) lockRef.current = false;
+    }
+  }, []);
+
   const handleBarcodeScanned = useCallback(
     (result: BarcodeScanningResult) => {
       if (!isFocusedRef.current || !holdingRef.current || lockRef.current) return;
@@ -190,10 +249,19 @@ export default function ScannerScreen() {
       holdingRef.current = false;
       setHoldingToScan(false);
       setLastBarcode(value);
+      if (chefModeRef.current) {
+        void addScannedToChef(value);
+        return;
+      }
       goToResult(value);
     },
-    [goToResult]
+    [goToResult, addScannedToChef]
   );
+
+  const openRecipes = useCallback(() => {
+    if (chefItems.length < CHEF_MIN_ITEMS) return;
+    router.push('/recipes');
+  }, [chefItems.length, router]);
 
   const handleCameraReady = useCallback(() => {
     setCameraReady(true);
@@ -414,7 +482,13 @@ export default function ScannerScreen() {
                 ]}
               >
                 <MaterialCommunityIcons
-                  name={holdingToScan ? 'line-scan' : 'gesture-tap-hold'}
+                  name={
+                    holdingToScan
+                      ? 'line-scan'
+                      : chefMode
+                        ? 'chef-hat'
+                        : 'gesture-tap-hold'
+                  }
                   size={16}
                   color={holdingToScan ? scanOnInk : 'rgba(255,255,255,0.92)'}
                 />
@@ -423,11 +497,43 @@ export default function ScannerScreen() {
                     styles.hintText,
                     holdingToScan && { color: scanOnInk },
                   ]}
+                  numberOfLines={1}
                 >
-                  {holdingToScan ? t('scanner.scanning') : t('scanner.holdToScan')}
+                  {holdingToScan
+                    ? t('scanner.scanning')
+                    : chefMode
+                      ? t('chef.holdToCollect')
+                      : t('scanner.holdToScan')}
                 </Text>
               </View>
             </View>
+
+            <Pressable
+              onPress={toggleChefMode}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: chefMode }}
+              accessibilityLabel={t('chef.toggleA11y')}
+              hitSlop={8}
+              style={[styles.chefButton, chefMode && styles.chefButtonActive]}
+            >
+              <Image
+                source={CHEF_IMAGE}
+                style={styles.chefImage}
+                resizeMode="contain"
+              />
+              {chefItems.length > 0 ? (
+                <View
+                  style={[
+                    styles.chefBadge,
+                    { backgroundColor: scanInk, borderColor: scanOnInk },
+                  ]}
+                >
+                  <Text style={[styles.chefBadgeText, { color: scanOnInk }]}>
+                    {chefItems.length > 99 ? '99+' : String(chefItems.length)}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
 
             <View style={styles.scanFrame} pointerEvents="none">
               <View
@@ -533,6 +639,88 @@ export default function ScannerScreen() {
           },
         ]}
       >
+        {chefMode ? (
+          <View style={styles.chefPanel}>
+            <View style={styles.chefPanelHeader}>
+              <MaterialCommunityIcons
+                name="chef-hat"
+                size={15}
+                color={colors.textSecondary}
+              />
+              <Text
+                style={[styles.devLabel, styles.chefPanelTitle, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {tf('chef.panelTitle', { count: chefItems.length })}
+              </Text>
+              {chefItems.length > 0 ? (
+                <Pressable
+                  onPress={clearChefItems}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('chef.clearA11y')}
+                  hitSlop={8}
+                >
+                  <Text style={[styles.chefClearText, { color: colors.textSecondary }]}>
+                    {t('chef.clear')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {chefItems.length > 0 ? (
+              <ScrollView
+                ref={chefChipsRef}
+                horizontal
+                style={styles.chefChipsScroll}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chefChips}
+              >
+                {chefItems.map((item, index) => (
+                  <ChefChip
+                    key={item.key}
+                    item={item}
+                    onRemove={removeChefItem}
+                    zIndex={chefItems.length - index}
+                  />
+                ))}
+              </ScrollView>
+            ) : null}
+            <Pressable
+              onPress={openRecipes}
+              disabled={chefItems.length < CHEF_MIN_ITEMS}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: chefItems.length < CHEF_MIN_ITEMS }}
+              style={[
+                styles.chefCta,
+                chefItems.length >= CHEF_MIN_ITEMS
+                  ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                  : { backgroundColor: 'transparent', borderColor: colors.border },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="silverware-fork-knife"
+                size={18}
+                color={
+                  chefItems.length >= CHEF_MIN_ITEMS ? colors.onPrimary : colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.chefCtaText,
+                  {
+                    color:
+                      chefItems.length >= CHEF_MIN_ITEMS
+                        ? colors.onPrimary
+                        : colors.textSecondary,
+                  },
+                ]}
+              >
+                {chefItems.length >= CHEF_MIN_ITEMS
+                  ? t('chef.showRecipes')
+                  : tf('chef.scanMore', { count: CHEF_MIN_ITEMS - chefItems.length })}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
         <View style={styles.lastScanRow}>
           <View style={styles.lastScanText}>
             <Text style={[styles.devLabel, { color: colors.textSecondary }]}>
@@ -567,6 +755,7 @@ export default function ScannerScreen() {
             </Pressable>
           ) : null}
         </View>
+        )}
       </View>
 
       <View
@@ -771,8 +960,9 @@ const styles = StyleSheet.create({
   },
   hintWrap: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    // Leaves room for the chef button in the top-right corner.
+    left: 68,
+    right: 68,
     alignItems: 'center',
     zIndex: 5,
   },
@@ -797,6 +987,83 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.2,
+  },
+  chefButton: {
+    position: 'absolute',
+    top: 6,
+    right: 10,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 17, 21, 0.45)',
+    borderColor: 'rgba(255,255,255,0.35)',
+    zIndex: 6,
+  },
+  chefButtonActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+    borderWidth: 3,
+  },
+  chefImage: {
+    width: 44,
+    height: 44,
+  },
+  chefBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chefBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  chefPanel: {
+    gap: 8,
+  },
+  chefPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  chefPanelTitle: {
+    flex: 1,
+  },
+  chefClearText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Bleeds into the panel padding so a popping (scaled-up) chip isn't clipped.
+  chefChipsScroll: {
+    marginHorizontal: -16,
+    marginVertical: -4,
+  },
+  chefChips: {
+    gap: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+  },
+  chefCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 11,
+  },
+  chefCtaText: {
+    fontWeight: '700',
+    fontSize: 15,
   },
   // Large guide — scanning uses the full camera frame, not only this box.
   scanFrame: {

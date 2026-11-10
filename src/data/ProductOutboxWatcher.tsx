@@ -15,7 +15,7 @@ import { flushProductSubmissions } from './productSubmissionOutbox';
  */
 export function ProductOutboxWatcher() {
   const { user } = useAuth();
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const appStateRef = useRef<string | null | undefined>(AppState.currentState);
 
   useEffect(() => {
     if (!user) return;

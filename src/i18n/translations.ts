@@ -115,6 +115,31 @@ type TranslationKey =
   | 'scanner.profile'
   | 'scanner.settings'
   | 'scanner.leaderboard'
+  | 'chef.toggleA11y'
+  | 'chef.holdToCollect'
+  | 'chef.panelTitle'
+  | 'chef.clear'
+  | 'chef.clearA11y'
+  | 'chef.removeA11y'
+  | 'chef.showRecipes'
+  | 'chef.scanMore'
+  | 'chef.recipesTitle'
+  | 'chef.finding'
+  | 'chef.retry'
+  | 'chef.fromProducts'
+  | 'chef.youHave'
+  | 'chef.showLess'
+  | 'chef.noIngredientData'
+  | 'chef.matchCount'
+  | 'chef.safeOnly'
+  | 'chef.noRecipes'
+  | 'chef.noSafeRecipes'
+  | 'chef.noRecipesHint'
+  | 'chef.haveOf'
+  | 'chef.missing'
+  | 'chef.haveAll'
+  | 'chef.allergens'
+  | 'chef.openAt'
   | 'leaderboard.prizeDay'
   | 'leaderboard.prizeWeek'
   | 'leaderboard.prizeMonth'
@@ -720,6 +745,31 @@ const en: Record<TranslationKey, string> = {
   'scanner.profile': 'Profile',
   'scanner.settings': 'Settings',
   'scanner.leaderboard': 'Leaderboard',
+  'chef.toggleA11y': 'Chef mode',
+  'chef.holdToCollect': 'Hold to add ingredient',
+  'chef.panelTitle': 'Chef mode · {count} scanned',
+  'chef.clear': 'Clear',
+  'chef.clearA11y': 'Remove all scanned products',
+  'chef.removeA11y': 'Remove {name}',
+  'chef.showRecipes': 'Show recipes',
+  'chef.scanMore': 'Scan {count} more to see recipes',
+  'chef.recipesTitle': 'Recipes',
+  'chef.finding': 'Finding recipes…',
+  'chef.retry': 'Try again',
+  'chef.fromProducts': 'Based on {count} scanned products',
+  'chef.youHave': 'You have',
+  'chef.showLess': 'Show less',
+  'chef.noIngredientData': 'No recipe data for: {names}',
+  'chef.matchCount': '{count} recipes match',
+  'chef.safeOnly': 'Safe for me',
+  'chef.noRecipes': 'No recipes found',
+  'chef.noSafeRecipes': 'No recipes without your allergens',
+  'chef.noRecipesHint': 'Scan more ingredients to get more suggestions.',
+  'chef.haveOf': '{have} of {need}',
+  'chef.missing': 'Missing:',
+  'chef.haveAll': 'You have everything you need',
+  'chef.allergens': 'Allergens:',
+  'chef.openAt': 'Open recipe at {source}',
   'leaderboard.prizeDay': "Today's prize",
   'leaderboard.prizeWeek': "This week's prize",
   'leaderboard.prizeMonth': "This month's prize",
@@ -1385,6 +1435,31 @@ const nb: Record<TranslationKey, string> = {
   'scanner.profile': 'Profil',
   'scanner.settings': 'Innstillinger',
   'scanner.leaderboard': 'Ledertavle',
+  'chef.toggleA11y': 'Kokkemodus',
+  'chef.holdToCollect': 'Hold for å legge til',
+  'chef.panelTitle': 'Kokkemodus · {count} skannet',
+  'chef.clear': 'Tøm',
+  'chef.clearA11y': 'Fjern alle skannede produkter',
+  'chef.removeA11y': 'Fjern {name}',
+  'chef.showRecipes': 'Vis oppskrifter',
+  'chef.scanMore': 'Skann {count} til for å se oppskrifter',
+  'chef.recipesTitle': 'Oppskrifter',
+  'chef.finding': 'Finner oppskrifter…',
+  'chef.retry': 'Prøv igjen',
+  'chef.fromProducts': 'Basert på {count} skannede produkter',
+  'chef.youHave': 'Du har',
+  'chef.showLess': 'Vis færre',
+  'chef.noIngredientData': 'Ingen oppskriftsdata for: {names}',
+  'chef.matchCount': '{count} oppskrifter passer',
+  'chef.safeOnly': 'Trygt for meg',
+  'chef.noRecipes': 'Fant ingen oppskrifter',
+  'chef.noSafeRecipes': 'Ingen oppskrifter uten dine allergener',
+  'chef.noRecipesHint': 'Skann flere ingredienser for å få flere forslag.',
+  'chef.haveOf': '{have} av {need}',
+  'chef.missing': 'Mangler:',
+  'chef.haveAll': 'Du har alt du trenger',
+  'chef.allergens': 'Allergener:',
+  'chef.openAt': 'Åpne oppskriften hos {source}',
   'leaderboard.prizeDay': 'Dagens premie',
   'leaderboard.prizeWeek': 'Ukens premie',
   'leaderboard.prizeMonth': 'Månedens premie',

@@ -272,7 +272,7 @@ export function SuggestMergeModal({
                     <Text style={{ color: colors.textSecondary, paddingVertical: 8 }}>
                       {t('result.mergeNoResults')}
                     </Text>
-                  ) : null
+                  ) : undefined
                 }
                 renderItem={({ item }) => {
                   const active = selected?.id === item.id;

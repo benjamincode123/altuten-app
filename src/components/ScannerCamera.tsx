@@ -3,6 +3,7 @@ import {
   BarcodeScanningResult,
   BarcodeType,
   CameraView,
+  type LensInfo,
 } from 'expo-camera';
 import { memo, useCallback, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
@@ -26,34 +27,38 @@ type ScannerCameraProps = {
   onCameraReady?: () => void;
 };
 
+const WIDE_ANGLE_DEVICE_TYPE = 'AVCaptureDeviceTypeBuiltInWideAngleCamera';
+
 /**
- * expo-camera matches `selectedLens` to each lens's *localizedName*
- * (e.g. "Back Camera"), not Apple device-type ids like
- * `builtInWideAngleCamera`. Without a real match, iOS falls back to the
- * system-preferred camera — often the 0.5× ultra-wide.
+ * Pick the plain 1× back lens. Since SDK 58, expo-camera reports lenses as
+ * `{ deviceType, localizedName }` and `selectedLens` takes the `deviceType`.
+ * Without a real match, iOS falls back to the system-preferred camera —
+ * often the 0.5× ultra-wide, which is bad for close-up barcodes.
  */
-function pickOneXLens(lenses: string[]): string | undefined {
+function pickOneXLens(lenses: LensInfo[]): string | undefined {
   if (lenses.length === 0) return undefined;
 
-  const isExcluded = (name: string) =>
+  const wideAngle = lenses.find((l) => l.deviceType === WIDE_ANGLE_DEVICE_TYPE);
+  if (wideAngle) return wideAngle.deviceType;
+
+  // Fallback by name for unexpected device types.
+  const label = (l: LensInfo) => `${l.deviceType} ${l.localizedName}`;
+  const isExcluded = (l: LensInfo) =>
     /ultra|tele|dual|triple|lidar|true\s*depth|continuity|0\s*[.,]\s*5/i.test(
-      name
+      label(l)
     );
 
-  const candidates = lenses.filter((name) => !isExcluded(name));
-  if (candidates.length === 0) return lenses[0];
+  const candidates = lenses.filter((l) => !isExcluded(l));
+  if (candidates.length === 0) return lenses[0].deviceType;
 
-  // Prefer an explicit wide-angle label when present.
-  const wide = candidates.find((name) => /wide/i.test(name));
-  if (wide) return wide;
+  const wide = candidates.find((l) => /wide/i.test(label(l)));
+  if (wide) return wide.deviceType;
 
   // Typical default: "Back Camera" / "Bakre kamera" / similar short names.
-  const plainBack = candidates.find((name) =>
-    /^(back|bakre|rear)\b/i.test(name.trim())
+  const plainBack = candidates.find((l) =>
+    /^(back|bakre|rear)\b/i.test(l.localizedName.trim())
   );
-  if (plainBack) return plainBack;
-
-  return candidates[0];
+  return (plainBack ?? candidates[0]).deviceType;
 }
 
 /**

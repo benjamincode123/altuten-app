@@ -20,7 +20,7 @@ export function InboxAlertWatcher() {
   const { t, tf } = useI18n();
   const router = useRouter();
   const knownUnreadRef = useRef<Set<number> | null>(null);
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const appStateRef = useRef<string | null | undefined>(AppState.currentState);
 
   // Seed known unread so we don't alert for messages already present at login.
   useEffect(() => {
@@ -84,7 +84,7 @@ export function InboxAlertWatcher() {
     const onAppState = (next: AppStateStatus) => {
       const prev = appStateRef.current;
       appStateRef.current = next;
-      if (prev.match(/inactive|background/) && next === 'active') {
+      if (prev?.match(/inactive|background/) && next === 'active') {
         tick();
       }
     };

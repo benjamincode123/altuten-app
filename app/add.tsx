@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -178,7 +178,7 @@ export default function AddProductScreen() {
   const [allergenPickerKind, setAllergenPickerKind] = useState<
     Extract<AllergenStatus, 'contains' | 'mayContain'> | null
   >(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   // Started on mount so the GPS fix is usually ready by the time the user
   // saves — a cold location read takes seconds and used to block the save.
   const gpsRef = useRef<Promise<GpsSubmissionLocation> | null>(null);

@@ -38,7 +38,7 @@ export async function cachePendingProductImage(
   try {
     const file = new File(imagesDirectory(), fileName(catalog, id));
     file.create({ overwrite: true });
-    file.write(trimmed);
+    await file.write(trimmed);
   } catch {
     // Memory still covers this session.
   }

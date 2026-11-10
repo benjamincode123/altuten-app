@@ -82,7 +82,7 @@ export async function enqueueProductSubmission(product: NewProduct): Promise<voi
   };
   const file = new File(outboxDirectory(), `${entry.id}.json`);
   file.create({ overwrite: true });
-  file.write(JSON.stringify(entry));
+  await file.write(JSON.stringify(entry));
 }
 
 /** How many submissions are still waiting to upload. */
@@ -182,7 +182,7 @@ async function runFlush(): Promise<void> {
       }
 
       try {
-        file.write(JSON.stringify({ ...entry, attempts } satisfies OutboxEntry));
+        await file.write(JSON.stringify({ ...entry, attempts } satisfies OutboxEntry));
       } catch {
         // Keeping the old attempt count only costs an extra retry.
       }

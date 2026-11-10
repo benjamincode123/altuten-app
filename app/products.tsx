@@ -447,7 +447,7 @@ export default function ProductsScreen() {
                       {tf('products.pageOnly', { page: String(page) })}
                     </Text>
                   </View>
-                ) : null
+                ) : undefined
               }
               ListFooterComponent={
                 showPager ? (
@@ -503,7 +503,7 @@ export default function ProductsScreen() {
                       />
                     </Pressable>
                   </View>
-                ) : null
+                ) : undefined
               }
               ListEmptyComponent={
                 <View style={styles.emptyBlock}>
