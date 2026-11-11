@@ -139,7 +139,22 @@ type TranslationKey =
   | 'chef.missing'
   | 'chef.haveAll'
   | 'chef.allergens'
-  | 'chef.openAt'
+  | 'chef.ingredients'
+  | 'chef.steps'
+  | 'chef.ingredientsCount'
+  | 'chef.stepsCount'
+  | 'chef.noSteps'
+  | 'chef.youHaveThis'
+  | 'chef.allergensFromScan'
+  | 'chef.allergensIncomplete'
+  | 'chef.noAllergensFound'
+  | 'chef.mayContain'
+  | 'chef.creditSource'
+  | 'chef.creditBy'
+  | 'chef.creditContributors'
+  | 'chef.creditLicense'
+  | 'chef.creditChanges'
+  | 'chef.creditPhoto'
   | 'leaderboard.prizeDay'
   | 'leaderboard.prizeWeek'
   | 'leaderboard.prizeMonth'
@@ -769,7 +784,22 @@ const en: Record<TranslationKey, string> = {
   'chef.missing': 'Missing:',
   'chef.haveAll': 'You have everything you need',
   'chef.allergens': 'Allergens:',
-  'chef.openAt': 'Open recipe at {source}',
+  'chef.ingredients': 'Ingredients',
+  'chef.steps': 'How to make it',
+  'chef.ingredientsCount': '{count} ingredients',
+  'chef.stepsCount': '{count} steps',
+  'chef.noSteps': 'This recipe has no steps yet.',
+  'chef.youHaveThis': 'You have this',
+  'chef.allergensFromScan': 'Allergens in the products you scanned',
+  'chef.allergensIncomplete': 'Check the allergens in the other ingredients you use.',
+  'chef.noAllergensFound': 'None of the products you scanned contain allergens.',
+  'chef.mayContain': 'May contain:',
+  'chef.creditSource': 'Source: «{title}» from {source}',
+  'chef.creditBy': 'By {author}',
+  'chef.creditContributors': '{source} contributors',
+  'chef.creditLicense': 'License: {license}',
+  'chef.creditChanges': 'Translated and adapted by AltUten',
+  'chef.creditPhoto': 'Photo: {author}',
   'leaderboard.prizeDay': "Today's prize",
   'leaderboard.prizeWeek': "This week's prize",
   'leaderboard.prizeMonth': "This month's prize",
@@ -1459,7 +1489,22 @@ const nb: Record<TranslationKey, string> = {
   'chef.missing': 'Mangler:',
   'chef.haveAll': 'Du har alt du trenger',
   'chef.allergens': 'Allergener:',
-  'chef.openAt': 'Åpne oppskriften hos {source}',
+  'chef.ingredients': 'Ingredienser',
+  'chef.steps': 'Slik gjør du',
+  'chef.ingredientsCount': '{count} ingredienser',
+  'chef.stepsCount': '{count} steg',
+  'chef.noSteps': 'Denne oppskriften mangler fremgangsmåte.',
+  'chef.youHaveThis': 'Du har denne',
+  'chef.allergensFromScan': 'Allergener i produktene du har skannet',
+  'chef.allergensIncomplete': 'Sjekk allergenene i de andre ingrediensene du bruker.',
+  'chef.noAllergensFound': 'Ingen av produktene du har skannet inneholder allergener.',
+  'chef.mayContain': 'Kan inneholde:',
+  'chef.creditSource': 'Kilde: «{title}» fra {source}',
+  'chef.creditBy': 'Av {author}',
+  'chef.creditContributors': '{source}-bidragsytere',
+  'chef.creditLicense': 'Lisens: {license}',
+  'chef.creditChanges': 'Oversatt og tilpasset av AltUten',
+  'chef.creditPhoto': 'Foto: {author}',
   'leaderboard.prizeDay': 'Dagens premie',
   'leaderboard.prizeWeek': 'Ukens premie',
   'leaderboard.prizeMonth': 'Månedens premie',

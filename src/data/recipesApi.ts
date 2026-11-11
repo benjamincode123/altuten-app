@@ -13,15 +13,36 @@ export type RecipeSuggestionRequest = {
   minCoverage?: number;
 };
 
+/** Source credit shown at the bottom of the recipe page (CC BY-SA recipes). Null for MENY. */
+export type RecipeCredit = {
+  sourceName: string;
+  sourceUrl: string | null;
+  author: string | null;
+  authorsUrl: string | null;
+  license: string;
+  licenseUrl: string | null;
+  /** e.g. "Oversatt og tilpasset av AltUten" */
+  changes: string | null;
+  imageAuthor: string | null;
+  imageLicense: string | null;
+  /** Ready-made full credit text. */
+  text: string | null;
+};
+
 export type RecipeSuggestion = {
   id: number;
   name: string;
   imageUrl: string | null;
-  /** Original recipe (MENY). */
+  /** Original recipe page (used for the credit, not opened on tap). */
   url: string;
   source: string;
-  /** Official allergen names: "Gluten", "Melk", … */
+  /** Allergens of the scanned products the recipe uses: "Gluten", "Melk", … */
   allergens: string[];
+  /** "May contain" allergens of those products (not in `allergens`). */
+  mayContain: string[];
+  /** True when the recipe needs unscanned ingredients whose allergens are unknown. */
+  allergensIncomplete: boolean;
+  credit: RecipeCredit | null;
   /** 0–1 */
   coverage: number;
   have: number;
@@ -78,9 +99,56 @@ export async function fetchRecipeSuggestions(
       ? data.recipes.map((r) => ({
           ...r,
           allergens: Array.isArray(r.allergens) ? r.allergens : [],
+          mayContain: Array.isArray(r.mayContain) ? r.mayContain : [],
+          allergensIncomplete: r.allergensIncomplete === true,
+          credit: r.credit ?? null,
           matched: Array.isArray(r.matched) ? r.matched : [],
           missing: Array.isArray(r.missing) ? r.missing : [],
         }))
       : [],
+  };
+}
+
+export type RecipeDetail = {
+  id: number;
+  name: string;
+  imageUrl: string | null;
+  url: string;
+  source: string;
+  language: string | null;
+  /** Untranslated title, for the credit line. */
+  originalName: string | null;
+  ingredients: string[];
+  steps: string[];
+  credit: RecipeCredit | null;
+};
+
+export async function fetchRecipe(token: string, id: number): Promise<RecipeDetail> {
+  let response: Response;
+  try {
+    response = await fetch(recipesUrl(`/${id}`), {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+  } catch {
+    throw new AppError('network');
+  }
+  if (!response.ok) {
+    const body = await readApiErrorBody(response);
+    throw appErrorFromHttp(response.status, body.error, 'generic', body.retryAfterSeconds);
+  }
+  const data = (await response.json()) as Partial<RecipeDetail>;
+  const strings = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+  return {
+    id: data.id ?? id,
+    name: data.name ?? '',
+    imageUrl: data.imageUrl ?? null,
+    url: data.url ?? '',
+    source: data.source ?? '',
+    language: data.language ?? null,
+    originalName: data.originalName ?? null,
+    ingredients: strings(data.ingredients),
+    steps: strings(data.steps),
+    credit: data.credit ?? null,
   };
 }

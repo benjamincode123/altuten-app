@@ -256,6 +256,7 @@ function RootNavigator() {
         <Stack.Screen name="admin" options={{ title: t('nav.admin') }} />
         <Stack.Screen name="settings" options={{ title: t('nav.settings') }} />
         <Stack.Screen name="recipes" options={{ title: t('chef.recipesTitle') }} />
+        <Stack.Screen name="recipe" options={{ title: t('chef.recipesTitle') }} />
       </Stack>
     </>
   );

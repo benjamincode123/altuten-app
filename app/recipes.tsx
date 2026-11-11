@@ -1,9 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
-  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import { useAllergenPrefs } from '../src/allergens/AllergenPrefsContext';
 import { allergenLabelMatches } from '../src/allergens/allergenPrefs';
 import { getAuthToken } from '../src/auth/session';
 import { CHEF_MIN_ITEMS, useChefItems } from '../src/chef/chefBasket';
+import { rememberSuggestions } from '../src/chef/recipeCache';
 import { AllergenBadge } from '../src/components/AllergenBadge';
 import { AllergnomShelfLoader } from '../src/components/AllergnomShelfLoader';
 import { ErrorText } from '../src/components/ErrorText';
@@ -35,9 +36,10 @@ const HAVE_PREVIEW = 10;
 
 export default function RecipesScreen() {
   const { colors } = useTheme();
-  const { t, tf, allergenName } = useI18n();
+  const { t, tf } = useI18n();
   const { selected: avoidAllergens } = useAllergenPrefs();
   const items = useChefItems();
+  const router = useRouter();
 
   const [data, setData] = useState<RecipeSuggestionResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,7 @@ export default function RecipesScreen() {
         limit: RECIPE_LIMIT,
       });
       if (requestId !== requestIdRef.current) return;
+      rememberSuggestions(result.recipes);
       setData(result);
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
@@ -92,8 +95,7 @@ export default function RecipesScreen() {
   }, [data, safeOnly, avoidedIn]);
 
   const openRecipe = (recipe: RecipeSuggestion) => {
-    if (!recipe.url) return;
-    void Linking.openURL(recipe.url).catch(() => undefined);
+    router.push({ pathname: '/recipe', params: { id: String(recipe.id) } });
   };
 
   if (loading && !data) {
@@ -247,86 +249,74 @@ export default function RecipesScreen() {
         }
         renderItem={({ item }) => {
           const avoided = avoidedIn(item);
-          const otherAllergens = item.allergens.filter((a) => !avoided.includes(a));
           const pct = Math.round(Math.max(0, Math.min(1, item.coverage)) * 100);
+          const complete = item.missing.length === 0;
           return (
             <Pressable
               onPress={() => openRecipe(item)}
-              accessibilityRole="link"
-              accessibilityLabel={item.name}
-              style={[styles.recipeCard, { backgroundColor: colors.background }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.name}, ${tf('chef.haveOf', { have: item.have, need: item.need })}`}
+              style={({ pressed }) => [
+                styles.recipeCard,
+                { backgroundColor: colors.background, opacity: pressed ? 0.85 : 1 },
+              ]}
             >
-              <View style={styles.recipeTop}>
-                <View style={[styles.thumb, { backgroundColor: colors.surface }]}>
-                  {item.imageUrl ? (
-                    <Image
-                      source={{ uri: item.imageUrl }}
-                      style={styles.thumbImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <MaterialCommunityIcons
-                      name="silverware-fork-knife"
-                      size={24}
-                      color={colors.textSecondary}
-                    />
-                  )}
-                </View>
-                <View style={styles.recipeMain}>
-                  <Text style={[styles.recipeName, { color: colors.text }]} numberOfLines={2}>
-                    {item.name}
+              <View style={[styles.hero, { backgroundColor: colors.surface }]}>
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={styles.heroImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Image source={CHEF_IMAGE} style={styles.heroPlaceholder} resizeMode="contain" />
+                )}
+                <View style={[styles.coveragePill, { backgroundColor: colors.background }]}>
+                  <MaterialCommunityIcons
+                    name={complete ? 'check-circle' : 'basket-outline'}
+                    size={14}
+                    color={colors.text}
+                  />
+                  <Text style={[styles.coveragePillText, { color: colors.text }]}>
+                    {tf('chef.haveOf', { have: item.have, need: item.need })}
                   </Text>
-                  <View style={styles.coverageRow}>
-                    <View style={[styles.coverageTrack, { backgroundColor: colors.surface }]}>
-                      <View
-                        style={[
-                          styles.coverageFill,
-                          { width: `${pct}%`, backgroundColor: colors.primary },
-                        ]}
-                      />
-                    </View>
-                    <Text style={[styles.coverageText, { color: colors.textSecondary }]}>
-                      {tf('chef.haveOf', { have: item.have, need: item.need })}
-                    </Text>
-                  </View>
                 </View>
               </View>
 
-              {item.missing.length > 0 ? (
-                <Text style={[styles.detailLine, { color: colors.textSecondary }]}>
-                  <Text style={[styles.detailLabel, { color: colors.text }]}>
-                    {t('chef.missing')}{' '}
-                  </Text>
-                  {item.missing.join(', ')}
+              <View style={styles.recipeBody}>
+                <Text style={[styles.recipeName, { color: colors.text }]} numberOfLines={2}>
+                  {item.name}
                 </Text>
-              ) : (
-                <Text style={[styles.detailLine, styles.detailLabel, { color: colors.text }]}>
-                  {t('chef.haveAll')}
-                </Text>
-              )}
-
-              {avoided.length > 0 ? (
-                <View style={styles.chipWrap}>
-                  {avoided.map((a) => (
-                    <AllergenBadge key={a} name={a} kind="contains" />
-                  ))}
+                <View style={[styles.coverageTrack, { backgroundColor: colors.surface }]}>
+                  <View
+                    style={[
+                      styles.coverageFill,
+                      { width: `${pct}%`, backgroundColor: colors.primary },
+                    ]}
+                  />
                 </View>
-              ) : null}
-              {otherAllergens.length > 0 ? (
-                <Text style={[styles.allergenLine, { color: colors.textSecondary }]}>
-                  {t('chef.allergens')} {otherAllergens.map(allergenName).join(', ')}
-                </Text>
-              ) : null}
-
-              <View style={[styles.sourceRow, { borderTopColor: colors.border }]}>
-                <Text style={[styles.sourceText, { color: colors.textSecondary }]}>
-                  {tf('chef.openAt', { source: item.source?.toUpperCase() || 'MENY' })}
-                </Text>
-                <MaterialCommunityIcons
-                  name="open-in-new"
-                  size={16}
-                  color={colors.textSecondary}
-                />
+                {complete ? (
+                  <Text style={[styles.detailLine, styles.detailLabel, { color: colors.text }]}>
+                    {t('chef.haveAll')}
+                  </Text>
+                ) : (
+                  <Text
+                    style={[styles.detailLine, { color: colors.textSecondary }]}
+                    numberOfLines={2}
+                  >
+                    <Text style={[styles.detailLabel, { color: colors.text }]}>
+                      {t('chef.missing')}{' '}
+                    </Text>
+                    {item.missing.join(', ')}
+                  </Text>
+                )}
+                {avoided.length > 0 ? (
+                  <View style={styles.chipWrap}>
+                    {avoided.map((a) => (
+                      <AllergenBadge key={a} name={a} kind="contains" />
+                    ))}
+                  </View>
+                ) : null}
               </View>
             </Pressable>
           );
@@ -382,34 +372,37 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   filterChipText: { fontSize: 13, fontWeight: '700' },
-  recipeCard: { borderRadius: 12, padding: 14, marginBottom: 10, gap: 10 },
-  recipeTop: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  thumb: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
+  recipeCard: {
+    borderRadius: 16,
+    marginBottom: 14,
     overflow: 'hidden',
+  },
+  hero: {
+    width: '100%',
+    aspectRatio: 16 / 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbImage: { ...StyleSheet.absoluteFill },
-  recipeMain: { flex: 1, minWidth: 0, gap: 8 },
-  recipeName: { fontSize: 16, fontWeight: '700', lineHeight: 21 },
-  coverageRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  coverageTrack: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
-  coverageFill: { height: '100%', borderRadius: 3 },
-  coverageText: { fontSize: 12, fontWeight: '600' },
-  detailLine: { fontSize: 13, lineHeight: 18 },
-  detailLabel: { fontWeight: '700' },
-  allergenLine: { fontSize: 12, lineHeight: 17 },
-  sourceRow: {
+  heroImage: { ...StyleSheet.absoluteFill },
+  heroPlaceholder: { width: 88, height: 88, opacity: 0.9 },
+  coveragePill: {
+    position: 'absolute',
+    left: 12,
+    bottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  sourceText: { fontSize: 12, fontWeight: '600' },
+  coveragePillText: { fontSize: 12, fontWeight: '700' },
+  recipeBody: { padding: 14, gap: 10 },
+  recipeName: { fontSize: 18, fontWeight: '800', lineHeight: 23 },
+  coverageTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
+  coverageFill: { height: '100%', borderRadius: 3 },
+  detailLine: { fontSize: 13, lineHeight: 18 },
+  detailLabel: { fontWeight: '700' },
   chefImage: { width: 96, height: 96 },
   emptyWrap: { alignItems: 'center', paddingTop: 32, paddingHorizontal: 16, gap: 8 },
   emptyTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
