@@ -139,6 +139,7 @@ type TranslationKey =
   | 'chef.missing'
   | 'chef.haveAll'
   | 'chef.allergens'
+  | 'chef.openAt'
   | 'chef.ingredients'
   | 'chef.steps'
   | 'chef.ingredientsCount'
@@ -784,6 +785,7 @@ const en: Record<TranslationKey, string> = {
   'chef.missing': 'Missing:',
   'chef.haveAll': 'You have everything you need',
   'chef.allergens': 'Allergens:',
+  'chef.openAt': 'Open recipe at {source}',
   'chef.ingredients': 'Ingredients',
   'chef.steps': 'How to make it',
   'chef.ingredientsCount': '{count} ingredients',
@@ -1489,6 +1491,7 @@ const nb: Record<TranslationKey, string> = {
   'chef.missing': 'Mangler:',
   'chef.haveAll': 'Du har alt du trenger',
   'chef.allergens': 'Allergener:',
+  'chef.openAt': 'Åpne oppskriften hos {source}',
   'chef.ingredients': 'Ingredienser',
   'chef.steps': 'Slik gjør du',
   'chef.ingredientsCount': '{count} ingredienser',

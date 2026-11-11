@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   Image,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -94,8 +95,14 @@ export default function RecipesScreen() {
     return safeOnly ? all.filter((r) => avoidedIn(r).length === 0) : all;
   }, [data, safeOnly, avoidedIn]);
 
+  // Licensed recipes (Wikibooks) open in the app; MENY recipes (no credit) open on MENY's site.
   const openRecipe = (recipe: RecipeSuggestion) => {
-    router.push({ pathname: '/recipe', params: { id: String(recipe.id) } });
+    if (recipe.credit) {
+      router.push({ pathname: '/recipe', params: { id: String(recipe.id) } });
+      return;
+    }
+    if (!recipe.url) return;
+    void Linking.openURL(recipe.url).catch(() => undefined);
   };
 
   if (loading && !data) {
@@ -254,7 +261,7 @@ export default function RecipesScreen() {
           return (
             <Pressable
               onPress={() => openRecipe(item)}
-              accessibilityRole="button"
+              accessibilityRole={item.credit ? 'button' : 'link'}
               accessibilityLabel={`${item.name}, ${tf('chef.haveOf', { have: item.have, need: item.need })}`}
               style={({ pressed }) => [
                 styles.recipeCard,
@@ -315,6 +322,18 @@ export default function RecipesScreen() {
                     {avoided.map((a) => (
                       <AllergenBadge key={a} name={a} kind="contains" />
                     ))}
+                  </View>
+                ) : null}
+                {!item.credit ? (
+                  <View style={[styles.sourceRow, { borderTopColor: colors.border }]}>
+                    <Text style={[styles.sourceText, { color: colors.textSecondary }]}>
+                      {tf('chef.openAt', { source: item.source?.toUpperCase() || 'MENY' })}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="open-in-new"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
                   </View>
                 ) : null}
               </View>
@@ -403,6 +422,14 @@ const styles = StyleSheet.create({
   coverageFill: { height: '100%', borderRadius: 3 },
   detailLine: { fontSize: 13, lineHeight: 18 },
   detailLabel: { fontWeight: '700' },
+  sourceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+  },
+  sourceText: { fontSize: 12, fontWeight: '600' },
   chefImage: { width: 96, height: 96 },
   emptyWrap: { alignItems: 'center', paddingTop: 32, paddingHorizontal: 16, gap: 8 },
   emptyTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center' },
