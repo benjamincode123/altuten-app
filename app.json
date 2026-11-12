@@ -20,6 +20,11 @@
         "CFBundleDisplayName": "AltUten",
         "UIBackgroundModes": [
           "remote-notification"
+        ],
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleLocalizations": [
+          "nb",
+          "en"
         ]
       }
     },
@@ -113,6 +118,10 @@
     },
     "experiments": {
       "typedRoutes": true
+    },
+    "locales": {
+      "nb": "./locales/nb.json",
+      "en": "./locales/en.json"
     }
   }
 }

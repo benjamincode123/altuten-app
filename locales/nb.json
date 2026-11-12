@@ -1,0 +1,6 @@
+{
+  "CFBundleDisplayName": "AltUten",
+  "NSCameraUsageDescription": "AltUten bruker kameraet til å skanne strekkoder på dagligvarer og ta bilde av produkter du sender inn.",
+  "NSPhotoLibraryUsageDescription": "AltUten lar deg legge ved et produktbilde når du rapporterer en strekkode.",
+  "NSLocationWhenInUseUsageDescription": "AltUten bruker posisjonen din til å velge språk og vise produkter fra landet du er i, så søk og skanning går raskere."
+}

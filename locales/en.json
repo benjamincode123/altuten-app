@@ -1,0 +1,6 @@
+{
+  "CFBundleDisplayName": "AltUten",
+  "NSCameraUsageDescription": "AltUten uses the camera to scan grocery barcodes and photograph products for review.",
+  "NSPhotoLibraryUsageDescription": "AltUten lets you attach a product photo when reporting a barcode.",
+  "NSLocationWhenInUseUsageDescription": "We would like to give you the best experience. To make AltUten faster and more suited to you, we use your location for language and local product results."
+}
