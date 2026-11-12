@@ -247,6 +247,7 @@ type TranslationKey =
   | 'admin.nameRequired'
   | 'admin.viewImage'
   | 'admin.approve'
+  | 'admin.savingInBackground'
   | 'admin.deny'
   | 'admin.prev'
   | 'admin.next'
@@ -858,6 +859,7 @@ const en: Record<TranslationKey, string> = {
   'admin.nameRequired': 'Product name is required.',
   'admin.viewImage': 'View full image',
   'admin.approve': 'Approve',
+  'admin.savingInBackground': 'Saving {count} in the background…',
   'admin.deny': 'Deny',
   'admin.prev': 'Previous',
   'admin.next': 'Next',
@@ -1523,6 +1525,7 @@ const nb: Record<TranslationKey, string> = {
   'admin.nameRequired': 'Produktnavn er påkrevd.',
   'admin.viewImage': 'Vis bilde i full størrelse',
   'admin.approve': 'Godkjenn',
+  'admin.savingInBackground': 'Lagrer {count} i bakgrunnen …',
   'admin.deny': 'Avvis',
   'admin.prev': 'Forrige',
   'admin.next': 'Neste',

@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import {
   ActivityIndicator,
@@ -40,6 +40,7 @@ import {
   isGlutenRating,
   parseProductCatalog,
 } from '../src/db/types';
+import { isAppError } from '../src/errors/appError';
 import { userFacingError } from '../src/errors/userFacingError';
 import { useI18n } from '../src/i18n/I18nContext';
 import type { TranslationKey } from '../src/i18n/translations';
@@ -166,6 +167,13 @@ export default function AdminScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
+  const pendingKeysRef = useRef<Set<string>>(new Set());
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+  const pageRef = useRef(page);
+  pageRef.current = page;
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [notifyTitle, setNotifyTitle] = useState('');
   const [notifyBody, setNotifyBody] = useState('');
@@ -542,98 +550,122 @@ export default function AdminScreen() {
     );
   };
 
-  async function handleApprove(id: number) {
+  type ModerationTab = 'products' | 'images' | 'wrongInfo' | 'merges';
+
+  /** Removes the card locally right away so moderation feels instant. */
+  function removeLocally(kind: ModerationTab, id: number) {
+    const drop = <T extends { id: number }>(list: T[]) => list.filter((x) => x.id !== id);
+    if (kind === 'products') setItems(drop);
+    else if (kind === 'images') setImageItems(drop);
+    else if (kind === 'wrongInfo') setWrongInfoItems(drop);
+    else setMergeItems(drop);
+    setTotalCount((c) => Math.max(0, c - 1));
+    setDrafts((d) => {
+      if (!(id in d)) return d;
+      const next = { ...d };
+      delete next[id];
+      return next;
+    });
+  }
+
+  /** Quietly reloads the tab once the queue is idle (backfills the page, restores failed cards). */
+  async function refreshQuietly(kind: ModerationTab, token: string) {
+    const currentPage = pageRef.current;
+    const notPending = (x: { id: number }) => !pendingKeysRef.current.has(`${kind}:${x.id}`);
+    try {
+      let empty: boolean;
+      if (kind === 'products') {
+        const r = await adminApi.fetchPendingSubmissions(token, currentPage);
+        if (tabRef.current !== kind) return;
+        applyProductList({ ...r, items: r.items.filter(notPending) });
+        empty = r.items.length === 0;
+      } else if (kind === 'images') {
+        const r = await adminApi.fetchPendingImageValidations(token, currentPage);
+        if (tabRef.current !== kind) return;
+        applyImageList({ ...r, items: r.items.filter(notPending) });
+        empty = r.items.length === 0;
+      } else if (kind === 'wrongInfo') {
+        const r = await adminApi.fetchPendingWrongInfoReports(token, currentPage);
+        if (tabRef.current !== kind) return;
+        applyWrongInfoList({ ...r, items: r.items.filter(notPending) });
+        empty = r.items.length === 0;
+      } else {
+        const r = await adminApi.fetchPendingMergeSuggestions(token, currentPage);
+        if (tabRef.current !== kind) return;
+        applyMergeList({ ...r, items: r.items.filter(notPending) });
+        empty = r.items.length === 0;
+      }
+      if (empty && currentPage > 1) setPage((p) => p - 1);
+    } catch {
+      // The next focus or tab switch reloads anyway.
+    }
+  }
+
+  /**
+   * Optimistic moderation: hide the card now, send the request through a serial
+   * background queue, and reload the list once nothing is pending for that tab.
+   * A failure shows an error and the reload brings the card back. 409 (already
+   * reviewed, e.g. a sibling photo auto-denied by an approval) counts as done.
+   */
+  function moderate(kind: ModerationTab, id: number, action: (token: string) => Promise<void>) {
     const token = getAuthToken();
     if (!token) return;
+    const key = `${kind}:${id}`;
+    if (pendingKeysRef.current.has(key)) return;
+    pendingKeysRef.current.add(key);
+    setPendingCount((c) => c + 1);
+    setError(null);
+    removeLocally(kind, id);
+
+    queueRef.current = queueRef.current.then(async () => {
+      try {
+        await action(token);
+      } catch (err) {
+        if (!(isAppError(err) && err.status === 409)) {
+          setError(userFacingError(err, t, 'generic'));
+        }
+      } finally {
+        pendingKeysRef.current.delete(key);
+        setPendingCount((c) => Math.max(0, c - 1));
+      }
+      const stillPending = [...pendingKeysRef.current].some((k) => k.startsWith(`${kind}:`));
+      if (!stillPending) {
+        await refreshQuietly(kind, token);
+      }
+    });
+  }
+
+  function handleApprove(id: number) {
     const draft = drafts[id];
     if (!draft) return;
     if (!draft.name.trim()) {
       setError(t('admin.nameRequired'));
       return;
     }
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.approveSubmission(token, id, {
-        barcode: draft.barcode.trim() || 'unknown',
-        name: draft.name.trim(),
-        produsent: draft.produsent,
-        ingredients: draft.ingredients,
-        glutenRating: draft.glutenRating,
-        allergens: draft.allergens,
-      });
-      const result = await adminApi.fetchPendingSubmissions(token, page);
-      applyProductList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+    const edits: adminApi.ApproveSubmissionEdits = {
+      barcode: draft.barcode.trim() || 'unknown',
+      name: draft.name.trim(),
+      produsent: draft.produsent,
+      ingredients: draft.ingredients,
+      glutenRating: draft.glutenRating,
+      allergens: draft.allergens,
+    };
+    moderate('products', id, (token) => adminApi.approveSubmission(token, id, edits));
   }
 
-  async function handleDeny(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.denySubmission(token, id);
-      const result = await adminApi.fetchPendingSubmissions(token, page);
-      applyProductList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleDeny(id: number) {
+    moderate('products', id, (token) => adminApi.denySubmission(token, id));
   }
 
-  async function handleApproveImage(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.approveImageValidation(token, id);
-      const result = await adminApi.fetchPendingImageValidations(token, page);
-      applyImageList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleApproveImage(id: number) {
+    moderate('images', id, (token) => adminApi.approveImageValidation(token, id));
   }
 
-  async function handleDenyImage(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.denyImageValidation(token, id);
-      const result = await adminApi.fetchPendingImageValidations(token, page);
-      applyImageList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleDenyImage(id: number) {
+    moderate('images', id, (token) => adminApi.denyImageValidation(token, id));
   }
 
-  async function handleSaveAndResolveWrongInfo(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
+  function handleSaveAndResolveWrongInfo(id: number) {
     const item = wrongInfoItems.find((r) => r.id === id);
     if (!item || !item.productFound) return;
     const catalog = parseProductCatalog(item.catalog);
@@ -646,89 +678,34 @@ export default function AdminScreen() {
       setError(t('admin.nameRequired'));
       return;
     }
-    setBusyId(id);
-    setError(null);
-    try {
-      await getProductRepository().addProduct({
-        barcode: draft.barcode.trim() || 'unknown',
-        name: draft.name.trim(),
-        produsent: draft.produsent.trim() || null,
-        ingredients: draft.ingredients.trim() || null,
-        glutenRating: isGlutenRating(draft.glutenRating)
-          ? draft.glutenRating
-          : GlutenRating.GlutenFree,
-        allergens: draft.allergens,
-        id: item.productId,
-        catalog,
-      });
+    const product = {
+      barcode: draft.barcode.trim() || 'unknown',
+      name: draft.name.trim(),
+      produsent: draft.produsent.trim() || null,
+      ingredients: draft.ingredients.trim() || null,
+      glutenRating: isGlutenRating(draft.glutenRating)
+        ? draft.glutenRating
+        : GlutenRating.GlutenFree,
+      allergens: draft.allergens,
+      id: item.productId,
+      catalog,
+    };
+    moderate('wrongInfo', id, async (token) => {
+      await getProductRepository().addProduct(product);
       await adminApi.resolveWrongInfoReport(token, id);
-      const result = await adminApi.fetchPendingWrongInfoReports(token, page);
-      applyWrongInfoList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+    });
   }
 
-  async function handleDismissWrongInfo(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.dismissWrongInfoReport(token, id);
-      const result = await adminApi.fetchPendingWrongInfoReports(token, page);
-      applyWrongInfoList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleDismissWrongInfo(id: number) {
+    moderate('wrongInfo', id, (token) => adminApi.dismissWrongInfoReport(token, id));
   }
 
-  async function handleAcceptMerge(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.acceptMergeSuggestion(token, id);
-      const result = await adminApi.fetchPendingMergeSuggestions(token, page);
-      applyMergeList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleAcceptMerge(id: number) {
+    moderate('merges', id, (token) => adminApi.acceptMergeSuggestion(token, id));
   }
 
-  async function handleDismissMerge(id: number) {
-    const token = getAuthToken();
-    if (!token) return;
-    setBusyId(id);
-    setError(null);
-    try {
-      await adminApi.dismissMergeSuggestion(token, id);
-      const result = await adminApi.fetchPendingMergeSuggestions(token, page);
-      applyMergeList(result);
-      if (result.items.length === 0 && page > 1) {
-        setPage((p) => p - 1);
-      }
-    } catch (err) {
-      setError(userFacingError(err, t, 'generic'));
-    } finally {
-      setBusyId(null);
-    }
+  function handleDismissMerge(id: number) {
+    moderate('merges', id, (token) => adminApi.dismissMergeSuggestion(token, id));
   }
 
   return (
@@ -792,6 +769,14 @@ export default function AdminScreen() {
       ) : null}
 
       {error ? <ErrorText style={styles.error}>{error}</ErrorText> : null}
+      {pendingCount > 0 ? (
+        <View style={styles.backgroundSaving}>
+          <ActivityIndicator size="small" color={colors.textSecondary} />
+          <Text style={[styles.backgroundSavingText, { color: colors.textSecondary }]}>
+            {tf('admin.savingInBackground', { count: pendingCount })}
+          </Text>
+        </View>
+      ) : null}
       {notifySuccess && tab === 'notifications' ? (
         <Text style={[styles.success, { color: colors.primary }]}>{notifySuccess}</Text>
       ) : null}
@@ -1940,6 +1925,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
+  backgroundSaving: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  backgroundSavingText: { fontSize: 13 },
   denyBtn: {
     borderWidth: 1,
     backgroundColor: 'transparent',
