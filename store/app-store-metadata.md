@@ -45,7 +45,7 @@ HJELP DATABASEN
 • Rapporter feil og få XP på ledertavlen
 
 MEDLEMSKAP
-AltUten krever medlemskap: 35 kr per måned eller 350 kr per år, med 7 dager gratis. Medlemmer av Norges Astma- og Allergiforbund eller Norsk cøliakiforening får 25 % rabatt.
+AltUten krever medlemskap: 35 kr per måned eller 350 kr per år, med 7 dager gratis.
 
 AltUten er laget i Norge av en utvikler med cøliaki.
 
